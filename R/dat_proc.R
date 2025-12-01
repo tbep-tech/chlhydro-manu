@@ -1,8 +1,11 @@
 library(tbeptools)
 library(tidyverse)
 library(mgcv)
+library(here)
 
-# playing with models ----------------------------------------------------
+source(here('R/funcs.R'))
+
+# data prep --------------------------------------------------------------
 
 # water quality
 wqdat <- epcdata |> 
@@ -21,39 +24,106 @@ wqdat <- epcdata |>
     sal = median(sal, na.rm = T),
     .by = c(bay_segment, date)
   ) |> 
-  arrange(bay_segment, date)
-
-
-tomod <- wqdat |> 
-  filter(bay_segment == 'OTB') |> 
+  arrange(bay_segment, date) |> 
   mutate(
     dec_time = decimal_date(date), 
     doy = yday(date),
     chla = ifelse(chla == 0, NA, chla)
   )
 
+# OTB model --------------------------------------------------------------
 
-mod <- gam(log10(chla) ~ te(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')), data = tomod, knots = list(doy=c(1,366)), na.action = na.exclude)
+tomod <- wqdat |> 
+  filter(bay_segment == 'HB')
+
+mod <- gam(chla ~ te(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')), data = tomod, 
+knots = list(doy=c(1,366)), family = Gamma(link = 'log'))
+
+mod <- gam(chla ~ s(dec_time, bs = 'tp') + 
+  s(doy, bs = 'cc') +                       
+  s(sal, bs = 'tp') +
+  ti(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')),
+  data = tomod,
+  knots = list(doy=c(1,366)),
+  family = Gamma(link = 'log'), 
+)
 
 summary(mod)$dev.expl
 
-ggplot(tomod, aes(x = dec_time, y = chla)) +
-  geom_point() +
-  geom_line(aes(y = predict(mod)), color = 'red')
+prds <- pred_fun(tomod, mod)
 
-toprd <- crossing(
-    date = seq.Date(as.Date('2000-01-01'), max(tomod$date), by = '1 month'),
-    sal = seq(min(tomod$sal, na.rm = T), max(tomod$sal, na.rm = T), length.out = 10)
-  ) |> 
+ggplot(prds, aes(x = dec_time, y = chla)) +
+  geom_point() +
+  geom_line(aes(y = btfit), color = 'red')
+
+
+grid_plo(prds, month = 'all', allsal = T)
+grid_plo(prds)
+grid_plo(prds, month = c(5:10), years = c(2000, 2024), allsal = T, ncol = 6, sal_fac = 6)
+
+
+toplo <- data.frame(prds) |> 
   mutate(
-    doy = yday(date),
-    dec_time = lubridate::decimal_date(date)
+    yr = lubridate::year(date)
+  ) |> 
+  summarise(
+    btfit = mean(btfit, na.rm = T), 
+    btnorm = mean(btnorm, na.rm = T),
+    .by = c(yr)
   )
 
-prds <- tibble(
-    pred_chla = 10^predict(mod, newdata = toprd)
-  ) |> 
-  bind_cols(toprd)
 
-gridgam_plo(prds, tomod, month = 'all', allsal = T)
-gridgam_plo(prds, tomod, month = c(5:10), allsal = T, ncol = 6)
+ggplot(toplo, aes(x = yr, y = btfit)) +
+  geom_point() + 
+  geom_line(aes(y = btnorm), color = 'red') + 
+  theme_minimal()
+
+toplo <- data.frame(prds)
+
+ggplot(toplo, aes(x = date, y = chla)) +
+  geom_point() +
+  geom_line(aes(y = btfit), color = 'red') +
+  geom_line(aes(y = btnorm), color = 'blue') +
+  theme_minimal()
+
+# all bay segments -------------------------------------------------------
+
+mods <- wqdat |> 
+  # filter(dec_time >= 2000) |
+  group_nest(bay_segment) |> 
+  mutate(
+    mod = map(data, ~ gam(chla ~ s(dec_time, k = 100, bs = 'tp') + 
+      s(doy, bs = 'cc') +                       
+      s(sal, bs = 'tp') +
+      ti(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')),
+      data = .x,
+      knots = list(doy=c(1,366)),
+      family = Gamma(link = 'log')
+    )),
+    prds = map2(data, mod, pred_fun), 
+    annsum = map(prds, ~ data.frame(.x) |>
+      mutate(
+        yr = lubridate::year(date)
+      ) |> 
+      summarise(
+        chla = mean(chla, na.rm = T),
+        btfit = mean(btfit, na.rm = T), 
+        btnorm = mean(btnorm, na.rm = T),
+        meansalfit = mean(meansalfit, na.rm = T),
+        .by = c(yr)
+      )
+    )
+  )
+
+
+toplo <- mods |>
+  select(bay_segment, annsum) |> 
+  unnest(annsum)
+
+ggplot(toplo, aes(x = yr, y = btfit)) +
+  geom_point() + 
+  geom_line(aes(y = btnorm), color = 'red') + 
+  geom_line(aes(y = meansalfit), color = 'blue', linetype = 'dashed') +
+  # coord_cartesian(xlim = c(2000, 2024)) +
+  facet_wrap(~ bay_segment, scales = 'free_y') +
+  theme_minimal()

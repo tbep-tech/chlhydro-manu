@@ -14,8 +14,80 @@ rsq_fun <- function(mod){
 
 }
 
+# get gam predictions
+pred_fun <- function(datin, modin){
+  
+  moddat <- datin
+  moddat$fit <- predict(modin, type = 'link', newdata = moddat)
+  moddat$btfit <- predict(modin, type = 'response', newdata = moddat)
+
+  salgrd <- moddat |> 
+    pull(sal) |>
+    range(na.rm = TRUE)
+  salgrd <- seq(salgrd[1], salgrd[2], length.out = 10)
+
+  # make prediction grid
+  toprd <- moddat |> 
+    select(date, dec_time, doy) |> 
+    crossing(
+      sal = salgrd
+    )
+
+  # get link predictions, wide format
+  fits <- tibble(
+      res = as.numeric(predict(modin, newdata = toprd, type = 'link'))
+    ) |> 
+    bind_cols(toprd) |> 
+    mutate(
+      year = lubridate::year(date), 
+      month = lubridate::month(date), 
+      day = lubridate::day(date), 
+      sal = factor(sal, levels = salgrd, labels = paste0('X', seq(1:length(salgrd))))
+    ) |> 
+    select(-dec_time, -doy) |> 
+    pivot_wider(names_from = sal, values_from = res)
+
+  # get response predictions, wide format
+  btfits <- tibble(
+      res = as.numeric(predict(modin, newdata = toprd, type = 'response'))
+    ) |> 
+    bind_cols(toprd) |> 
+    mutate(
+      year = lubridate::year(date), 
+      month = lubridate::month(date), 
+      day = lubridate::day(date), 
+      sal = factor(sal, levels = salgrd, labels = paste0('X', seq(1:length(salgrd))))
+    ) |> 
+    select(-dec_time, -doy) |> 
+    pivot_wider(names_from = sal, values_from = res)
+
+  # normalized results
+  moddat <- norm_fun(moddat, fits, btfits, salgrd)
+
+  # predictions at mean salinity
+  mod <- lm(sal ~ dec_time, data = moddat)
+  toprd <- data.frame(
+    dec_time = moddat$dec_time,
+    doy = moddat$doy,
+    sal = predict(mod, newdata = data.frame(dec_time = moddat$dec_time))
+  )
+  moddat$meansalfit <- predict(modin, newdata = toprd, type = 'response')
+
+  out <- structure(
+    .Data = moddat, 
+    class = c('data.frame', 'tibble'),
+    fits = fits,
+    btfits = btfits,
+    salgrd = salgrd
+  )
+
+  return(out)
+  
+}
+
 # gridplot for gam
-gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = NULL, col_lim = NULL, salscl = TRUE, allsal = FALSE, sal_fac = 3, yr_fac = 3, ncol = NULL, grids = FALSE, pretty = TRUE, ...){
+# ... additional arguments to pass to gridpred_fun
+grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_lim = NULL, salscl = TRUE, allsal = FALSE, sal_fac = 3, yr_fac = 3, ncol = NULL, grids = FALSE, pretty = TRUE, ...){
  
   # convert month vector to those present in data
   allmo <- FALSE
@@ -24,21 +96,16 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
     month <- c(1:12)
   }
 
+  # format predictions as wide
+  to_plo <- attr(prds, 'btfits')
+   
+  # model data with date column
+  moddat <- data.frame(prds) |> 
+    filter(lubridate::year(date) >= min(to_plo$year) & lubridate::year(date) <= max(to_plo$year))
+
   # salinity grid values
-  sal_grd <- unique(prddat$sal)
-
-  # get the selected months
-  to_plo <- prddat |> 
-    mutate(
-      date = as.Date(date), 
-      year = lubridate::year(date), 
-      month = lubridate::month(date), 
-      day = lubridate::day(date), 
-      sal = factor(sal, levels = sal_grd, labels = paste0('X', seq(1:length(sal_grd))))
-    ) |> 
-    select(-doy, -dec_time) |> 
-    pivot_wider(names_from = sal, values_from = pred_chla)
-
+  salgrd <- attr(prds, 'salgrd')
+  
   # convert month vector to those present in data
   month <- month[month %in% to_plo$month]
   if(length(month) == 0) stop('No observable data for the chosen month')
@@ -59,10 +126,10 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
     if(nrow(to_plo) == 0) stop('No data to plot for the date range')
   
   }
-  
+
   # reshape data frame
   to_plo <- to_plo[to_plo$month %in% month, , drop = FALSE]
-  names(to_plo)[grep('^X', names(to_plo))] <- paste('sal', sal_grd)
+  names(to_plo)[grep('^X', names(to_plo))] <- paste('sal', salgrd)
   to_plo <- tidyr::gather(to_plo, 'sal', 'res', 5:ncol(to_plo)) |> 
     mutate(sal = as.numeric(gsub('^sal ', '', sal))) |> 
     select(-date, -day) |>  
@@ -75,7 +142,7 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
   if(!salscl){
    
     # grid data
-    salobs_rng <- range(wqdat$sal, na.rm = TRUE)
+    salobs_rng <- range(moddat$sal, na.rm = TRUE)
     salscl_rng <- range(to_plo$sal, na.rm = TRUE)
     to_plo$sal <- (to_plo$sal - salscl_rng[1]) / diff(salscl_rng) * diff(salobs_rng) + salobs_rng[1]
     
@@ -83,8 +150,8 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
     salscl_rng <- range(prddat$sal, na.rm = TRUE)
     prddat$sal <- (prddat$sal - salscl_rng[1]) / diff(salscl_rng) * diff(salobs_rng) + salobs_rng[1]
     
-    # sal_grd to raw scale
-    sal_grd <- seq(salobs_rng[1], salobs_rng[2], length = length(sal_grd))
+    # salgrd to raw scale
+    salgrd <- seq(salobs_rng[1], salobs_rng[2], length = length(salgrd))
     
   }
     
@@ -92,8 +159,8 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
   if(!allmo){
     
     # these are factors by which salinity and years are multiplied for interpolation
-    sal_fac <- length(sal_grd) * sal_fac
-    sal_fac <- seq(min(sal_grd), max(sal_grd), length.out = sal_fac)
+    sal_fac <- length(salgrd) * sal_fac
+    sal_fac <- seq(min(salgrd), max(salgrd), length.out = sal_fac)
     yr_fac <- length(unique(to_plo$year)) * yr_fac
     yr_fac <- seq(min(to_plo$year), max(to_plo$year), length.out = yr_fac)
     
@@ -146,15 +213,15 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
     # values to pass to interp
     dts <- dec_time(to_interp$date)$dec_time
     fit_grd <- select(to_interp, -date)
-    sal_fac <- length(sal_grd) * sal_fac
-    sal_fac <- seq(min(sal_grd), max(sal_grd), length.out = sal_fac)
+    sal_fac <- length(salgrd) * sal_fac
+    sal_fac <- seq(min(salgrd), max(salgrd), length.out = sal_fac)
     yr_fac <- seq(min(dts), max(dts), length.out = length(dts) *  yr_fac)
     to_norm <- expand.grid(yr_fac, sal_fac)
           
     # bilinear interpolation of fit grid with data to average for norms
     norms <- fields::interp.surface(
       obj = list(
-        y = sal_grd,
+        y = salgrd,
         x = dts,
         z = data.frame(fit_grd)
       ), 
@@ -170,11 +237,10 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
   if(!allsal & !allmo){
     
     #min, max salinity values to plot
-    lim_vals<- tomod |> 
+    lim_vals<- moddat |> 
       mutate(
         month = lubridate::month(date)
       ) |> 
-      filter(lubridate::year(date) >= min(to_plo$year) & lubridate::year(date) <= max(to_plo$year)) |>
       summarize(
         Low = quantile(sal, 0.05, na.rm = TRUE),
         High = quantile(sal, 0.95, na.rm = TRUE), 
@@ -200,8 +266,7 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
   # contstrain all data by quantiles if not separated by month    
   if(!allsal & allmo){
    
-    quants <- wqdat |> 
-      filter(lubridate::year(date) >= min(to_plo$year) & lubridate::year(date) <= max(to_plo$year)) |>
+    quants <- moddat |> 
       pull(sal) |> 
       quantile(c(0.05, 0.95), na.rm = TRUE)
     to_plo <- to_plo[with(to_plo, sal >= quants[1] & sal <= quants[2]), ]
@@ -252,5 +317,85 @@ gridgam_plo <- function(prddat, wqdat, month = c(1:12), years = NULL, col_vec = 
       )
   
   return(p)
+    
+}
+
+# normalize predictions
+norm_fun <- function(dat_in, fits, btfits, salgrd){
+
+  num_obs <- nrow(dat_in)
+
+  # prep interp grids by adding month, year columns
+  dts <- fits$date
+  fits <- select(fits, -year, -month, -day, -date)
+  btfits <- btfits |> 
+    select(-year, -date, -month, -day)
+
+  # sal values occuring by month, used for interpolation
+  sal_mon <- data.frame(dat_in) |> 
+    select(date, sal) |> 
+    mutate(
+      yr = lubridate::year(date), 
+      mo = lubridate::month(date)
+    ) |> 
+    select(-date) |> 
+    summarize(
+      sal = mean(sal, na.rm = TRUE), 
+      .by = c(yr, mo)
+    ) |> 
+    tidyr::spread(yr, sal)
+  
+  # values to interpolate for normalization
+  to_norm <- data.frame(dat_in) |> 
+    select(date) |> 
+    mutate(mo = lubridate::month(date)) |> 
+    left_join(sal_mon, by = 'mo') |> 
+    tidyr::gather('yr', 'sal', -date, -mo) |> 
+    arrange(date) |> 
+    select(date, sal) |> 
+    na.omit()
+
+  # bilinear interpolatoin of fit grid with data to average for norms
+  norms <- fields::interp.surface(
+    obj = list(
+      y = salgrd,
+      x = dts,
+      z = data.frame(fits)
+    ), 
+    loc = to_norm
+  )
+  
+  # append to normalization data, then average for unique dates
+  # averaging happens only if more than 80% of the predictions for a date are filled
+  norms <- data.frame(date = to_norm$date, norms) |> 
+    summarise(
+      norm = ifelse(sum(is.na(norms))/length(norms) > 0.2, NA, mean(norms, na.rm = TRUE)), 
+      .by = date
+    )
+   
+  # bilinear interpolatoin of fit grid with data to average for norms
+  btnorms <- fields::interp.surface(
+    obj = list(
+      y = salgrd,
+      x = dts,
+      z = data.frame(btfits)
+    ), 
+    loc = to_norm
+  )
+    
+  # append to normalization data, then average for unique dates
+  # averaging happens only if more than 80% of the predictions for a date are filled
+  btnorms <- data.frame(date = to_norm$date, btnorms) |> 
+    summarise(
+      btnorm = ifelse(sum(is.na(btnorms))/length(btnorms) > 0.2, NA, mean(btnorms, na.rm = TRUE)),
+      .by = date
+    )
+   
+  # append to dat_in object
+  dat_in <- dplyr::left_join(dat_in, norms, by = 'date')
+  dat_in <- dplyr::left_join(dat_in, btnorms, by = 'date')
+
+  # exit function
+  return(dat_in)
     
 }
