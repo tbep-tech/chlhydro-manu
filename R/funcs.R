@@ -88,7 +88,7 @@ pred_fun <- function(datin, modin){
 # gridplot for gam
 # ... additional arguments to pass to gridpred_fun
 grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_lim = NULL, salscl = TRUE, allsal = FALSE, sal_fac = 3, yr_fac = 3, ncol = NULL, grids = FALSE, pretty = TRUE, ...){
- 
+
   # convert month vector to those present in data
   allmo <- FALSE
   if('all' %in% month){ 
@@ -168,12 +168,12 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
     to_plo <- split(to_plo, to_plo$month)
 
     to_plo <- lapply(to_plo, function(x){
-      
+
       # interp across salinity first
       interped <- lapply(
         split(x, x$year), 
         function(y){
-          out <- approx(y$sal, y$res, xout = sal_fac)
+          out <- approx(y$sal, y$res, xout = sal_fac, rule = 2)
           out <- data.frame(year = unique(y$year), month = unique(y$month), out)
           return(out)
         })
@@ -184,7 +184,7 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
       interped <- lapply(
         split(interped, interped$sal), 
         function(y){
-          out <- approx(y$year, y$res, xout = yr_fac)
+          out <- approx(y$year, y$res, xout = yr_fac, rule = 2)
           out <- data.frame(year = out$x, month = unique(y$month), sal = unique(y$sal), res = out$y)
           return(out)
         })
