@@ -39,13 +39,20 @@ tomod <- wqdat |>
 mod <- gam(chla ~ te(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')), data = tomod, 
 knots = list(doy=c(1,366)), family = Gamma(link = 'log'))
 
-mod <- gam(chla ~ s(dec_time, bs = 'tp') + 
-  s(doy, bs = 'cc') +                       
-  s(sal, bs = 'tp') +
+mod <- gam(chla ~ s(dec_time, k = 100, bs = 'tp') + 
+  s(doy, k = 20, bs = 'cc') +                       
+  s(sal, k = 20, bs = 'tp') +
   ti(dec_time, doy, sal, bs = c('tp', 'cc', 'tp')),
   data = tomod,
   knots = list(doy=c(1,366)),
   family = Gamma(link = 'log'), 
+)
+
+mod <- gam(chla ~ s(dec_time, k = 300, bs = 'tp') +                   
+  s(sal, k = 50, bs = 'tp') +
+  ti(dec_time, sal, bs = c('tp', 'tp')),
+  data = tomod,
+  family = Gamma(link = 'log') 
 )
 
 summary(mod)$dev.expl
@@ -58,6 +65,7 @@ ggplot(prds, aes(x = dec_time, y = chla)) +
 
 
 grid_plo(prds, month = 'all', allsal = T)
+grid_plo(prds, month = 'all', allsal = T, years = c(2000, 2024))
 grid_plo(prds)
 grid_plo(prds, month = c(5:10), years = c(2000, 2024), allsal = T, ncol = 6, sal_fac = 6)
 

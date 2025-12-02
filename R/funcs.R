@@ -211,7 +211,7 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
       tidyr::spread(sal, res)
     
     # values to pass to interp
-    dts <- dec_time(to_interp$date)$dec_time
+    dts <- lubridate::decimal_date(to_interp$date)
     fit_grd <- select(to_interp, -date)
     sal_fac <- length(salgrd) * sal_fac
     sal_fac <- seq(min(salgrd), max(salgrd), length.out = sal_fac)
