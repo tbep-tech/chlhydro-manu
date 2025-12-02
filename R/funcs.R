@@ -120,12 +120,16 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
     if(length(years) != 2)
       stop('years argument must have two values for first and last')
   
-    years <- seq(years[1], years[2])
-    to_plo <- to_plo[to_plo$year %in% years, ]
-     
-    if(nrow(to_plo) == 0) stop('No data to plot for the date range')
-  
+  } else{
+
+    years <- range(to_plo$year)
+
   }
+  
+  years <- seq(years[1], years[2])
+  to_plo <- to_plo[to_plo$year %in% years, ]
+    
+  if(nrow(to_plo) == 0) stop('No data to plot for the date range')
 
   # reshape data frame
   to_plo <- to_plo[to_plo$month %in% month, , drop = FALSE]
@@ -239,11 +243,13 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
     #min, max salinity values to plot
     lim_vals<- moddat |> 
       mutate(
-        month = lubridate::month(date)
+        month = lubridate::month(date),
+        yr = lubridate::year(date)
       ) |> 
+      filter(yr %in% years) |> 
       summarize(
-        Low = quantile(sal, 0.05, na.rm = TRUE),
-        High = quantile(sal, 0.95, na.rm = TRUE), 
+        Low = quantile(sal, 0, na.rm = TRUE),
+        High = quantile(sal, 1, na.rm = TRUE), 
         .by = month
       )
   

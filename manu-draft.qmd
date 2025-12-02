@@ -1,0 +1,15 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Fig
+
+1. observed chl and model fit
+1. model fit v normalized
+1. grid plots
+1. normalized - fit v hydrology
+
+## Table
+
+1. Model summary statistics (include by month?)

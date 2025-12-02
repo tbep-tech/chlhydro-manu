@@ -171,7 +171,7 @@ actplo <- wqdat |>
 
 grds <- mods |> 
   mutate(
-    plo = map2(bay_segment, prds, ~ grid_plo(.y, month = c(6:11), years = c(2004, 2024), col_lim = c(1, 35), allsal = F, ncol = 6, sal_fac = 6) + labs(title = .x) + 
+    plo = map2(bay_segment, prds, ~ grid_plo(.y, month = c(6:11), years = c(2004, 2024), col_lim = c(0, 35), allsal = F, ncol = 6, sal_fac = 6) + labs(title = .x) + 
       geom_line(data = actplo |> filter(bay_segment == .x), aes(x = yr, y = sal), color = 'black', linetype = 'solid', linewidth = 0.5, inherit.aes = F) + 
       geom_point(data = actplo |> filter(bay_segment == .x), aes(x = yr, y = sal, fill = res), color = 'black', size = 3, shape = 21)
     )
@@ -179,3 +179,19 @@ grds <- mods |>
 
 grds$plo[[1]] + grds$plo[[2]] + grds$plo[[3]] + grds$plo[[4]] + 
   plot_layout(ncol = 1, guides = 'collect') & theme(legend.position = 'bottom')
+
+toplo <- mods |> 
+  select(bay_segment, prds) |>
+  mutate(prds = purrr::map(prds, as_tibble)) |>
+  unnest(prds) |> 
+  mutate(
+    mo = lubridate::month(date)
+  ) |> 
+  filter(dec_time >= 2004 & dec_time <= 2024) |> 
+  filter(mo %in% 6:11)
+
+ggplot(toplo, aes(x = chla, y = btfit)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = 'red') +
+  facet_grid(bay_segment ~ mo, scales = 'free') +
+  theme_minimal()
