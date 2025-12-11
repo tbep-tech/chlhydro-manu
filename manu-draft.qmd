@@ -1,7 +1,49 @@
 ---
-title: "Untitled"
-format: html
+format: 
+  docx:
+    reference-doc: my_styles.docx
+    number-sections: true
+title: "An awesome title for a great paper"
+bibliography: refs.bib
+csl: estuaries-and-coasts.csl
+crossref: 
+  fig-title: Fig.
+author:
+  - Marcus W Beck:
+      email: mbeck@tbep.org
+      orcid: 0000-0002-4996-0059
+      institute: [TBEP]
+      correspondence: true
+  - Kerry Flaherty-Walia:
+      email: kfwalia@tbep.org
+      orcid: 0000-0002-6032-0570
+      institute: [TBEP]
+      correspondence: false
+  - Maya C Burke:
+      email: mburke@tbep.org
+      orcid: 0000-0002-3847-6501      
+      institute: [TBEP]
+      correspondence: false 
+  - Edward T Sherwood:
+      email: esherwood@tbep.org
+      orcid: 0000-0001-5330-302X
+      institute: [TBEP]
+      correspondence: false
+
+institute:
+  - TBEP: Tampa Bay Estuary Program, 263 13th Ave S., Suite 350, St. Petersburg, Florida 33701 USA
+
+filters: 
+  - templates/scholarly-metadata.lua
+  - templates/author-info-blocks.lua
+  
+execute: 
+  echo: false
+  warning: false
+  ft.keepnext: false
+  ft.align: left
 ---
+
 
 ## Fig
 
@@ -13,3 +55,50 @@ format: html
 ## Table
 
 1. Model summary statistics (include by month?)
+
+
+## Methods
+
+### Data processing
+
+Salinity gaps were filled using linear interpolation between observed, where the maximum gap fill was three time steps (months).  Gaps accounted for less than 5% of the observatiosn for each bay segment.  
+
+### GAMs
+
+@fig-obsprd
+
+ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
+
+K values chosen for each smoother to allow sufficient degress of freedom for each smoother.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the k value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed. 
+
+{{< pagebreak >}}
+
+## Figures {.unnumbered}
+
+![Observed and predicted chlorophll-a ($\mu$g/L) for the four major bay segments of Tampa Bay.  Observed and predicted are shown continuously over time (a) and by month (b). Color shading indicates year. Rows are arranged by bay segment with the top labels in the left column showing the bay segment and the right column showing deviance explained.](figs/obsprd.png){#fig-obsprd}
+
+{{< pagebreak >}}
+
+## Data Availability {.unnumbered}
+
+All data and analysis code for this manuscript is available on GitHub at <https://github.com/tbep-tech/chlhydro-manu>.
+
+## Acknowledgments {.unnumbered}
+
+This work benefited from constructive discussions with the Technical Advisory Committee of the Tampa Bay Estuary Program (TBEP). We are thankful for constructive comments provided by xxx anonymous reviewers. We are indebted to the community of field and technical staff that have routinely collected and maintained the valuable long-term monitoring data used in this study.
+
+## Statements and Declarations {.unnumbered}
+
+### Author Contributions {.unnumbered}
+
+Conceptualization: Marcus W Beck, Kerry Flaherty-Walia, Maya C Burke, Edward T Sherwood; Data Curation: Marcus W Beck; Methodology: Marcus W Beck, Kerry Flaherty-Walia, Maya C Burke, Edward T Sherwood; Formal analysis and investigation: Marcus W Beck; Writing - original draft preparation: all authors; Writing - review and editing: all authors; Funding acquisition: Edward T Sherwood.
+
+### Ethics Declaration {.unnumbered}
+
+The authors have no competing interests to declare that are relevant to the content of this article.
+
+### Funding {.unnumbered}
+
+This study was funded by EPA Section 320 Grant Funds, and the TBEP's local government partners (Hillsborough, Manatee, Pasco, and Pinellas Counties; the Cities of Clearwater, St. Petersburg, and Tampa; Tampa Bay Water; and the Southwest Florida Water Management District) through contributions to the operating budget.
+
+## References {.unnumbered}
