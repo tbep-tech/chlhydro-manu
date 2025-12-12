@@ -165,19 +165,6 @@ toplo <- mods |>
   mutate(prds = purrr::map(prds, as_tibble)) |>
   unnest(prds)
 
-ggplot(toplo, aes(x = date, y = chla)) +
-  geom_point() + 
-  geom_line(aes(y = btfit), color = 'red') + 
-  # coord_cartesian(xlim = c(2000, 2024)) +
-  # scale_y_log10() + 
-  facet_wrap(~ bay_segment, scales = 'free_y') +
-  theme_minimal()
-
-toplo <- mods |> 
-  select(bay_segment, prds) |> 
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds)
-
 ggplot(toplo, aes(x = log(chla), y = fit)) +
   geom_point() +
   geom_abline(slope = 1, intercept = 0, color = 'red') +
@@ -194,55 +181,6 @@ r2vals <- toplo |>
     r2 = cor(logchla, fit, use = 'complete.obs')^2,
     .by = bay_segment
   )
-
-toplo <- mods |>
-  select(bay_segment, annsum) |> 
-  unnest(annsum) 
-  
-ggplot(toplo, aes(x = yr, y = btfit)) +
-  geom_point() + 
-  geom_line(aes(y = btnorm), color = 'red') + 
-  geom_line(aes(y = meansalfit), color = 'blue', linetype = 'dashed') +
-  # coord_cartesian(xlim = c(2000, 2024)) +
-  facet_wrap(~ bay_segment, scales = 'free_y') +
-  theme_minimal()
-
-toplo <- mods |>
-  select(bay_segment, prds) |>
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds)
-
-ggplot(toplo, aes(x = date, y = chla)) +
-  geom_point() +
-  geom_line(aes(y = btfit), color = 'red') +
-  # geom_line(aes(y = btnorm), color = 'blue') +
-  facet_wrap(~ bay_segment, scales = 'free_y') +
-  scale_x_date(limits = c(as.Date('2004-01-01'), as.Date('2024-12-31'))) +
-  theme_minimal()
-
-actplo <- wqdat |> 
-  mutate(
-    yr = lubridate::year(date),
-    month = lubridate::month(date, label = T, abbr = F)
-  ) |> 
-  filter(yr >= 2004 & yr <= 2024) |>
-  summarise(
-    sal = mean(sal, na.rm = T), 
-    res = mean(chla, na.rm = T),
-    .by = c(bay_segment, yr, month)
-  ) |> 
-  filter(month %in% month.name[6:11])
-
-grds <- mods |> 
-  mutate(
-    plo = map2(bay_segment, prds, ~ grid_plo(.y, month = c(6:11), years = c(2004, 2024), col_lim = c(0, 35), allsal = F, ncol = 6, sal_fac = 6) + labs(title = .x) + 
-      geom_line(data = actplo |> filter(bay_segment == .x), aes(x = yr, y = sal), color = 'black', linetype = 'solid', linewidth = 0.5, inherit.aes = F) + 
-      geom_point(data = actplo |> filter(bay_segment == .x), aes(x = yr, y = sal, fill = res), color = 'black', size = 3, shape = 21)
-    )
-  )
-
-grds$plo[[1]] + grds$plo[[2]] + grds$plo[[3]] + grds$plo[[4]] + 
-  plot_layout(ncol = 1, guides = 'collect') & theme(legend.position = 'bottom')
 
 toplo <- mods |> 
   select(bay_segment, prds) |>
@@ -261,4 +199,5 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
   theme_minimal()
 
 # residuals and hydro load -----------------------------------------------
+
 
