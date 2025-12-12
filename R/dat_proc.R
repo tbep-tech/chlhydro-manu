@@ -200,4 +200,120 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
 
 # residuals and hydro load -----------------------------------------------
 
+mohydatraw <- rdataload('https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mohydat.RData')
 
+hydat <- mohydatraw |> 
+  filter(!bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')) |> 
+  rename(
+    yr = year,
+    mo = month
+  ) |> 
+  mutate(
+    bay_segment = factor(bay_segment,
+      levels = c('Old Tampa Bay', 'Hillsborough Bay', 'Middle Tampa Bay', 'Lower Tampa Bay'), 
+     labels = c('OTB', 'HB', 'MTB', 'LTB')), 
+    date = make_date(year = yr, month = mo, day = 1),
+    qrt = factor(lubridate::quarter(date), levels = 1:4, labels = c('JFM', 'AMJ', 'JAS', 'OND')),
+  )
+
+save(hydat, file = here('data/hydat.RData'))
+
+
+load(file = here('data/mods.RData'))
+load(file = here('data/hydat.RData'))
+
+qrthydat <- hydat |> 
+  mutate(
+    date = floor_date(date, unit = 'quarter')
+  ) |> 
+  summarise(
+    hyqrt = sum(hy_load_106_m3_mo, na.rm = T),
+    .by = c(bay_segment, date, yr, qrt)
+  )
+
+qrtprds <- mods |> 
+  select(bay_segment, prds) |> 
+  mutate(prds = purrr::map(prds, as_tibble)) |>
+  unnest(prds) |> 
+  mutate(
+    yr = lubridate::year(date),
+    qrt = factor(lubridate::quarter(date), levels = 1:4, labels = c('JFM', 'AMJ', 'JAS', 'OND')),
+    date = floor_date(date, unit = 'quarter'),
+  ) |> 
+  summarise(
+    chla = mean(chla, na.rm = T),
+    btfit = mean(btfit, na.rm = T), 
+    btnorm = mean(btnorm, na.rm = T),
+    .by = c(bay_segment, date, yr, qrt)
+  ) |> 
+  inner_join(qrthydat, by = c('bay_segment', 'yr', 'qrt', 'date')) |> 
+  mutate(
+    prdresid = btfit - btnorm
+  )
+
+toplo <- qrtprds |> 
+  filter(yr >= 2004 & yr <= 2024) |> 
+  filter(bay_segment == 'OTB') |> 
+  mutate(
+    hyresid = hyqrt - mean(hyqrt, na.rm = T), 
+    .by = qrt
+  )
+
+# convert hyresid and prdresid to z-score
+toplo <- toplo |> 
+  mutate(
+    # hyresid = (hyresid - mean(hyresid, na.rm = T)) / sd(hyresid, na.rm = T), 
+    # prdresid = (prdresid - mean(prdresid, na.rm = T)) / sd(prdresid, na.rm = T),
+    rsq = round(summary(lm(prdresid ~ hyresid))$r.squared, 2), 
+    rsq = paste(qrt, ' (R² = ', rsq, ')', sep = ''), 
+    .by = qrt
+  )
+
+fac <- toplo |> 
+  select(qrt, rsq) |>
+  distinct()
+
+toplo <- toplo |>
+  mutate(
+    qrtlab = factor(qrt, levels = fac$qrt, labels = fac$rsq)
+  )
+
+p1 <- ggplot(toplo, aes(x = yr)) + 
+  geom_point(aes(y = btfit)) + 
+  geom_line(aes(y = btnorm), color = 'red') +
+  facet_wrap(~ qrt, ncol = 4) + 
+  theme_minimal() +
+  labs(
+    y = 'Chl-a (µg/L)',
+    x = NULL,
+    title = '(a) Quarterly Mean Predicted Chl-a'
+  )
+
+p2 <- ggplot(toplo, aes(x = yr)) +
+  geom_col(aes(y = hyresid), fill = 'lightblue') +
+  geom_hline(yintercept = 0, linetype = 'solid', color = 'darkgrey') +
+  facet_wrap(~ qrt, ncol = 4) +
+  theme_minimal() +
+  labs(
+    y = expression('Hydrologic Load ('*10^6*' m'^3*')'),
+    x = NULL,
+    title = '(b) Quarterly Hydrologic Load'
+  )
+
+p3 <- ggplot(toplo, aes(x = hyresid, y = prdresid)) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'darkgrey') +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = 'darkgrey') +
+  geom_point() +
+  geom_smooth(method = 'lm', color = 'red', se = F, formula = y ~ x) +
+  facet_wrap(~ qrtlab, ncol = 4) +
+  theme_minimal() +
+  labs(
+    x = expression('Hydrologic Load Residuals ('*10^6*' m'^3*')'),
+    y = 'Predicted Chl-a Residuals (µg/L)',
+    title = '(c) Residuals Relationship'
+  )
+
+p1 + p2 + p3 + 
+  plot_layout(ncol = 1)
+
+# need to extend this to other bay segments
