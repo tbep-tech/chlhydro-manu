@@ -38,6 +38,8 @@ wqdat <- epcdata |>
     .by = c(bay_segment)
   )
 
+save(wqdat, file = here('data/wqdat.RData'))
+
 # salinity NA by bay segment
 wqdat |> 
   summarise(
