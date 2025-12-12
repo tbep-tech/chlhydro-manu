@@ -65,7 +65,7 @@ Salinity gaps were filled using linear interpolation between observed, where the
 
 ### GAMs
 
-@fig-obsprd
+@fig-obsprd, @fig-prdnrm, @fig-gridplo
 
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
@@ -76,6 +76,14 @@ K values chosen for each smoother to allow sufficient degress of freedom for eac
 ## Figures {.unnumbered}
 
 ![Observed and predicted chlorophll-a ($\mu$g/L) for the four major bay segments of Tampa Bay.  Observed and predicted are shown continuously over time (a) and by month (b). Color shading indicates year. Rows are arranged by bay segment with the top labels in the left column showing the bay segment and the right column showing deviance explained.](figs/obsprd.png){#fig-obsprd}
+
+{{< pagebreak >}}
+
+![Annual predictions, normalized estimates, and mean salinity estimates for chlorophyll-a by major bay segment from the separate GAMs. Normalized values (solid lines) are those that remove the salinity influence using the mean result of predictions across a range of salinity values at each time step, whereas the mean salinity values (dashed lines) are annual predictions across a constant mean salinity for each bay segment. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/prdnrm.png){#fig-prdnrm}
+
+{{< pagebreak >}}
+
+![Predicted chlorophyll-a ($\mu$g/L) during the rainy season (June to November) from 2005 to present as related to salinity (ppth) by major bay segment.  Facets are arranged to show how the monthly predictions vary across years and different salnity ranges.  The points show the model predicted results for the observed salinity.  Salinity ranges in each plot are fixed the minimum and maximum observed across years for the month. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/gridplo.png){#fig-gridplo}
 
 {{< pagebreak >}}
 

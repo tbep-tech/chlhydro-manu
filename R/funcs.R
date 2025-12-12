@@ -112,7 +112,7 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
   
   # axis labels
   ylabel <- 'Chlorophyll-a (µg/L)'
-  xlabel <- NULL
+  xlabel <- 'Salinity (ppth)'
 
   # subset years to plot
   if(!is.null(years)){
@@ -307,10 +307,11 @@ grid_plo <- function(prds, month = c(1:12), years = NULL, col_vec = NULL, col_li
     theme_minimal() +
     theme(
       legend.position = 'top',
-      axis.title.x = element_blank()
+      axis.title.x = element_blank(), 
+      plot.title = element_text(hjust = 0.5)
       )  +
-    scale_x_continuous(expand = c(0, 0)) +
-    scale_y_continuous(xlabel, expand = c(0,0)) +
+    # scale_x_continuous(expand = c(0.05, 0.05)) +
+    scale_y_continuous(xlabel) + #, expand = c(0.05,0.05)) +
     scale_fill_gradientn(ylabel, colours = rev(cols), limits = col_lim) +
     guides(fill = guide_colourbar(barwidth = 10)) 
     
