@@ -186,14 +186,6 @@ toplo <- qrtprds |>
   filter(bay_segment == 'OTB') |> 
   mutate(
     hyresid = hyqrt - mean(hyqrt, na.rm = T), 
-    .by = qrt
-  )
-
-# convert hyresid and prdresid to z-score
-toplo <- toplo |> 
-  mutate(
-    # hyresid = (hyresid - mean(hyresid, na.rm = T)) / sd(hyresid, na.rm = T), 
-    # prdresid = (prdresid - mean(prdresid, na.rm = T)) / sd(prdresid, na.rm = T),
     rsq = round(summary(lm(prdresid ~ hyresid))$r.squared, 2), 
     rsq = paste(qrt, ' (R² = ', rsq, ')', sep = ''), 
     .by = qrt

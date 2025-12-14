@@ -44,6 +44,16 @@ execute:
   ft.align: left
 ---
 
+```{r}
+#| results: hide
+library(knitr)
+library(flextable)
+library(here)
+
+source(here('R/funcs.R'))
+
+load(file = here('tabs/hydnrmtab.RData'))
+```
 
 ## Fig
 
@@ -67,9 +77,11 @@ Salinity gaps were filled using linear interpolation between observed values, wh
 
 @fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
 
+@tbl-hydnrmtab
+
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
-K values chosen for each smoother to allow sufficient degress of freedom for each smoother.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the k value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed. 
+K values chosen to allow sufficient degress of freedom for each smoother.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the k value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed. 
 
 {{< pagebreak >}}
 
@@ -88,6 +100,18 @@ K values chosen for each smoother to allow sufficient degress of freedom for eac
 {{< pagebreak >}}
 
 ![Salinity-normalized chlorophyll-a ($\mu$g/L) related to hydology from 2004 to present in Old Tampa Bay.  GAM-predicted chlorophyll-a (points) and salinity-normalized (lines) are shown for each quarter (a), followed by hydrologic load anomalies (10$^6$ m$^3$ / quarter) as the load minus the long-term average by quarter (b), followed by the relationship between the predicted minus salinity-normalized chlorophyll and the hydrologic load anomalies by quarter (c). Model R$^2$ values are shown for the linear regression fit (lines) in (c).  JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December.](figs/hydnrm.png){#fig-hydnrm}
+
+{{< pagebreak >}}
+
+## Tables {.unnumbered}
+
+```{r}
+#| label: tbl-hydnrmtab
+#| tbl-cap: !expr 'paste0("Linear model fits between the predicted minus salinity-normalized chlorophyll and the hydrologic load anomalies by quarter, bay segment, and annual periods. OTB: Old Tampa Bay, HB: Hillsborough Bay, MTB: Middle Tampa Bay, LTB: Lower Tampa Bay. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. p < 0.05 *; p < 0.005 **.")'
+hydnrmtab
+```
+
+{{< pagebreak >}}
 
 ## Data Availability {.unnumbered}
 
