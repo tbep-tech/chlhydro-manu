@@ -76,13 +76,37 @@ Salinity gaps were filled using linear interpolation between observed values, wh
 
 ### GAMs
 
-@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
+$$
+\begin{align}
+\text{chla}_i &\sim \text{Gamma}(\mu_i, \phi) \\
+\log(\mu_i) &= \beta_0 + f_1(\text{dec\_time}_i) + f_2(\text{doy}_i) + f_3(\text{sal}_i) \\
+&\quad + f_{12}(\text{dec\_time}_i, \text{doy}_i) \\
+&\quad + f_{13}(\text{dec\_time}_i, \text{sal}_i) \\
+&\quad + f_{23}(\text{sal}_i, \text{doy}_i)
+\end{align}
+$$
 
-@tbl-gamtab, @tbl-hydnrmtab
+where chlorophyll-a is modelled as a Gamma-distributed response variable with mean $\mu_i$ and dispersion parameter ϕ for observation i.  The log-transformed mean chlorophyll-a is modelled as an intercept ($\beta_0$) plus smooth functions of decimal time (dec_time), day of year (doy), and salinity (sal), along with tensor product smooth interactions between each pair of the three predictors.  Specifically, $f_1​(\cdot)$ is a thin plate regression spline with k = 40 basis functions, $f_2(\cdot)$ is a cyclic cubic regression spline with k = 10 basis functions, $f_3(\cdot)$ is a thin plate regression spline with k = 10 basis functions, and $f_{12}(\cdot, \cdot)$, $f_{13}(\cdot, \cdot)$, and $f_{23}(\cdot, \cdot)$ are tensor product smooths (excluding main effects) with k = (5, 5) basis functions.  Smoothing parameters were estimated using restricted maximum likelihood (REML).
 
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
 K values chosen to allow sufficient degress of freedom for each smoother.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the k value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed. 
+
+Salinity-normalized predictions were made by predicting chlorophyll-a across a range of salinity values (minimum to maximum observed) at each time step, then taking the mean of those predictions as the salinity-normalized value for that time step.  
+
+$$
+\begin{align}
+\text{Norm}(t) &= \frac{1}{|\mathcal{S}|} \sum_{s \in \mathcal{S}} \hat{f}\left(t, s, \bar{\text{sal}}_{m(t),y(t)}\right)
+\end{align}
+$$
+
+## Results
+
+@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
+
+@tbl-gamtab, @tbl-hydnrmtab
+
+## Discussion
 
 {{< pagebreak >}}
 
