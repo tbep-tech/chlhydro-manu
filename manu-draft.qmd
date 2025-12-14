@@ -61,11 +61,11 @@ execute:
 
 ### Data processing
 
-Salinity gaps were filled using linear interpolation between observed, where the maximum gap fill was three time steps (months).  Gaps accounted for less than 5% of the observatiosn for each bay segment.  
+Salinity gaps were filled using linear interpolation between observed values, where the maximum gap fill was three time steps (months).  Gaps accounted for less than 5% of the observatiosn for each bay segment.  
 
 ### GAMs
 
-@fig-obsprd, @fig-prdnrm, @fig-gridplo
+@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
 
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
@@ -86,6 +86,8 @@ K values chosen for each smoother to allow sufficient degress of freedom for eac
 ![Predicted chlorophyll-a ($\mu$g/L) during the rainy season (June to November) from 2005 to present as related to salinity (ppth) by major bay segment.  Facets are arranged to show how the monthly predictions vary across years and different salnity ranges.  The points show the model predicted results for the observed salinity.  Salinity ranges in each plot are fixed the minimum and maximum observed across years for the month. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/gridplo.png){#fig-gridplo}
 
 {{< pagebreak >}}
+
+![Salinity-normalized chlorophyll-a ($\mu$g/L) related to hydology from 2004 to present in Old Tampa Bay.  GAM-predicted chlorophyll-a (points) and salinity-normalized (lines) are shown for each quarter (a), followed by hydrologic load anomalies (10$^6$ m$^3$ / quarter) as the load minus the long-term average by quarter (b), followed by the relationship between the predicted minus salinity-normalized chlorophyll and the hydrologic load anomalies by quarter (c). Model R$^2$ values are shown for the linear regression fit (lines) in (c).  JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December.](figs/hydnrm.png){#fig-hydnrm}
 
 ## Data Availability {.unnumbered}
 
