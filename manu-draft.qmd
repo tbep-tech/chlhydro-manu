@@ -52,6 +52,7 @@ library(here)
 
 source(here('R/funcs.R'))
 
+load(file = here('tabs/gamtab.RData'))
 load(file = here('tabs/hydnrmtab.RData'))
 ```
 
@@ -77,7 +78,7 @@ Salinity gaps were filled using linear interpolation between observed values, wh
 
 @fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
 
-@tbl-hydnrmtab
+@tbl-gamtab, @tbl-hydnrmtab
 
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
@@ -104,6 +105,14 @@ K values chosen to allow sufficient degress of freedom for each smoother.  Once 
 {{< pagebreak >}}
 
 ## Tables {.unnumbered}
+
+```{r}
+#| label: tbl-gamtab
+#| tbl-cap: !expr 'paste0("Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay.  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statitic (F), and p-value (p). `s()` indicates a single spline smooth for the predictor and `ti()` indicatees a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+gamtab
+```
+
+{{< pagebreak >}}
 
 ```{r}
 #| label: tbl-hydnrmtab

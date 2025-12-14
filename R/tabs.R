@@ -2,11 +2,68 @@ library(tidyverse)
 library(mgcv)
 library(here)
 library(flextable)
+library(broom)
 
 source(here('R/funcs.R'))
 
 load(file = here('data/mods.RData'))
 load(file = here('data/hydat.RData'))
+
+# GAM fits ---------------------------------------------------------------
+
+totab <- mods |> 
+  select(bay_segment, mod) |> 
+  mutate(
+    summ = purrr::map(mod, function(x){
+
+      summmod <- summary(x)
+      n <- summmod$n
+      GCV <- round(summmod$sp.criterion[[1]], 0)
+      devexpl <- round(summmod$dev.expl, 2)
+
+      smths <- x |> 
+        tidy() |> 
+        rowwise() |> 
+        mutate(
+          p.value = p_txt(p.value, addp = F)
+        ) |> 
+        ungroup() |> 
+        mutate_if(is.numeric, round, 2) |>
+        mutate_if(is.numeric, as.character) |> 
+        rename(
+          'Smoother' = term,
+          'Ref.df' = ref.df,
+          'F' = statistic,
+          'p' = p.value
+        )
+      
+      out <- bind_cols(n = n, GCV = GCV, devexpl = devexpl, smths) |> 
+        mutate(
+          n = ifelse(duplicated(n), '', n),
+          GCV = ifelse(duplicated(GCV), '', GCV),
+          devexpl = ifelse(duplicated(devexpl), '', devexpl)
+        ) |> 
+        rename(
+          `Num. Obs.` = n,
+          `Dev. Expl.` = devexpl
+        )
+
+      return(out)
+      
+    })
+  ) |> 
+  select(-mod) |> 
+  unnest('summ')
+
+gamtab <-  totab |>
+  as_grouped_data(groups = 'bay_segment') |>
+  flextable() |> 
+  set_header_labels(bay_segment = 'Bay Segment') |> 
+  padding(padding = 0, part = 'all') |> 
+  font(part = 'all', fontname = 'Times New Roman') |> 
+  autofit()
+
+save(gamtab, file = here('tabs/gamtab.RData'))
 
 # hydrology vs norm ------------------------------------------------------
 

@@ -40,6 +40,22 @@ p_ast <- function(x){
   
 }
 
+# p-value text formatting for GAM summary table
+p_txt <- function(x, addp = TRUE){
+  
+  if(x < 0.001){
+    out <- 'p < 0.001'
+  } else {
+    out <- paste('p =', sprintf('%.3f', round(x, 3)))
+  }
+  
+  if(!addp)
+    out <- gsub('^p\\s|\\=\\s', '', out)
+  
+  return(out)
+  
+}
+
 # model rsq, same as summary(mod)$dev.expl
 rsq_fun <- function(mod){
   
