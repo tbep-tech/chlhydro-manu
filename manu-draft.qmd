@@ -86,7 +86,7 @@ $$
 \end{align}
 $$
 
-where chlorophyll-a is modelled as a Gamma-distributed response variable with mean $\mu_i$ and dispersion parameter ϕ for observation i.  The log-transformed mean chlorophyll-a is modelled as an intercept ($\beta_0$) plus smooth functions of decimal time (dec_time), day of year (doy), and salinity (sal), along with tensor product smooth interactions between each pair of the three predictors.  Specifically, $f_1​(\cdot)$ is a thin plate regression spline with k = 40 basis functions, $f_2(\cdot)$ is a cyclic cubic regression spline with k = 10 basis functions, $f_3(\cdot)$ is a thin plate regression spline with k = 10 basis functions, and $f_{12}(\cdot, \cdot)$, $f_{13}(\cdot, \cdot)$, and $f_{23}(\cdot, \cdot)$ are tensor product smooths (excluding main effects) with k = (5, 5) basis functions.  Smoothing parameters were estimated using restricted maximum likelihood (REML).
+where chlorophyll-a is modelled as a Gamma-distributed response variable with mean $\mu_i$ and dispersion parameter ϕ for observation i.  The log-transformed mean chlorophyll-a is modelled as an intercept ($\beta_0$) plus smooth functions of decimal time (dec_time), day of year (doy), and salinity (sal), along with tensor product smooth interactions between each pair of the three predictors.  Specifically, $f_1​()$ is a thin plate regression spline with k = 40 basis functions, $f_2()$ is a cyclic cubic regression spline with k = 10 basis functions, $f_3()$ is a thin plate regression spline with k = 10 basis functions, and $f_{12}()$, $f_{13}()$, and $f_{23}()$ are tensor product smooths (excluding main effects) with k = (5, 5) basis functions.  Smoothing parameters were estimated using restricted maximum likelihood (REML).
 
 ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
 
@@ -102,7 +102,7 @@ $$
 
 ## Results
 
-@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-hydnrm
+@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salresp, @fig-hydnrm
 
 @tbl-gamtab, @tbl-hydnrmtab
 
@@ -121,6 +121,10 @@ $$
 {{< pagebreak >}}
 
 ![Predicted chlorophyll-a ($\mu$g/L) during the rainy season (June to November) from 2005 to present as related to salinity (ppth) by major bay segment.  Facets are arranged to show how the monthly predictions vary across years and different salnity ranges.  The points show the model predicted results for the observed salinity.  Salinity ranges in each plot are fixed the minimum and maximum observed across years for the month. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/gridplo.png){#fig-gridplo}
+
+{{< pagebreak >}}
+
+![Modelled chloropyll-a ($\mu$g/L) response with changing salinity (ppth) for 1980 and 2020.  Plot facets show approximate seasonal divisions (February, May, August, November) for each bay segment.  Salinity ranges are fixed to the 5th and 95th percentiles observed for the time period. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/salresp.png){#fig-salresp}
 
 {{< pagebreak >}}
 

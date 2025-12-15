@@ -121,7 +121,6 @@ png(here('figs/prdnrm.png'), width = 7, height = 5, units = 'in', res = 300)
 print(p)
 dev.off()
 
-
 # grid plot --------------------------------------------------------------
 
 prdplo <- mods |> 
@@ -147,6 +146,95 @@ p <- grds$plo[[1]] + grds$plo[[2]] + grds$plo[[3]] + grds$plo[[4]] +
   plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect_y') & theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
 
 png(here('figs/gridplo.png'), width = 11, height = 9, units = 'in', res = 300)
+print(p)
+dev.off()
+
+# salinity response by year ----------------------------------------------
+
+dec_time <- c(1980, 2020)
+doy <- yday(as.Date(c('1975-02-15', '1975-05-15', '1975-08-15', '1975-11-15')))
+
+plos <- mods |> 
+  mutate(
+    salplo = pmap(list(mod, prds, bay_segment), function(mod, prds, bay_segment){
+
+      bayseg <- bay_segment
+      # get salinity ranges
+      prdgrd <- wqdat |>  
+        select(date, sal, bay_segment) |> 
+        filter(bay_segment %in% bayseg) |>
+        mutate(
+          yr = year(date), 
+          anngrp = case_when(
+            yr %in% c(1975:1985) ~ 1980,
+            yr %in% 2015:2024 ~ 2020,
+            T ~ NA_real_
+          ), 
+          qrt = quarter(date), 
+          qrt = factor(qrt, levels = 1:4, labels = c('Feb', 'May', 'Aug', 'Nov'))
+        ) |> 
+        filter(!is.na(anngrp)) |> 
+        summarise(
+          salmin = quantile(sal, 0.05, na.rm = T),
+          salmax = quantile(sal, 0.95, na.rm = T), 
+          .by = c(qrt, anngrp)
+        ) |> 
+        group_by(qrt, anngrp) |>
+        nest() |> 
+        mutate(
+          sal = map(data, ~seq(.x$salmin, .x$salmax, length.out = 20))
+        ) |> 
+        select(-data) |> 
+        unnest(cols = c(sal)) |> 
+        mutate(
+          doy = case_when(
+            qrt == 'Feb' ~ yday(as.Date('1975-02-15')),
+            qrt == 'May' ~ yday(as.Date('1975-05-15')),
+            qrt == 'Aug' ~ yday(as.Date('1975-08-15')),
+            qrt == 'Nov' ~ yday(as.Date('1975-11-15')),
+          ),
+          dec_time = anngrp
+        )
+
+      prds <- predict(mod, newdata = prdgrd, type = 'response', se.fit = TRUE)
+      toplo <- as_tibble(prdgrd) |>
+        mutate(
+          btfit = prds$fit,
+          btupr = prds$fit + (1.96 * prds$se.fit),
+          btlwr = prds$fit - (1.96 * prds$se.fit),
+          date = as.Date(date_decimal(dec_time)),
+          qrt = factor(doy, levels = !!doy, labels = c('Feb', 'May', 'Aug', 'Nov')),
+          year = year(date)
+        )
+
+      p <- ggplot(toplo, aes(x = sal, y = btfit, group = year, color = factor(year), fill = factor(year))) +
+        geom_ribbon(
+          aes(ymin = btlwr, ymax = btupr),
+          alpha = 0.3, color = NA
+        ) +
+        # scale_y_log10() + 
+        geom_line() +
+        facet_wrap(~qrt, ncol = 4) +#, scales = 'free_y') +
+        labs(
+          x = 'Salinity (ppth)', y = 'Chl-a (µg/L)', 
+          fill = 'Year', 
+          color = 'Year', 
+          subtitle = bay_segment
+        ) +
+        theme_minimal()
+
+      return(p)
+
+    })
+  )
+
+p <- plos$salplo[[1]] + plos$salplo[[2]] + plos$salplo[[3]] + plos$salplo[[4]] + plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect') & 
+  theme(
+    legend.position = 'bottom', 
+    panel.grid.minor = element_blank()
+  )
+
+png(here('figs/salresp.png'), width = 8, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
