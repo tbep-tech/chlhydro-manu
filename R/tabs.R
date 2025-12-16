@@ -63,8 +63,7 @@ gamtab <- totab |>
 
 save(gamtab, file = here('tabs/gamtab.RData'))
 
-
-# GAM fits by time slides ------------------------------------------------
+# GAM fits by time slices ------------------------------------------------
 
 datprp <- mods |>
   select(bay_segment, prds) |>
@@ -113,8 +112,8 @@ totab <- bind_rows(totabqrt, totabann) |>
 
 # color function
 colfun <- function(x) {
-  x[is.na(x)] <- 0
-  pal <- RColorBrewer::brewer.pal(9, 'Greys')
+  x[is.na(x)] <- min(x, na.rm = T)
+  pal <- RColorBrewer::brewer.pal(9, 'Greys')[5:9]
   colorRampPalette(pal)(100)[as.numeric(cut(x, breaks = 100))]
 }
 
@@ -163,6 +162,107 @@ gamcrtab <- gamcrtab |>
   autofit()
 
 save(gamcrtab, file = here('tabs/gamcrtab.RData'))
+
+# pred - norm by time slices ---------------------------------------------
+
+datprp <- mods |>
+  select(bay_segment, prds) |>
+  mutate(prds = purrr::map(prds, as_tibble)) |>
+  unnest(prds) |>
+  mutate(
+    yr = lubridate::year(date),
+    yrcat = case_when(
+      yr < 2004 ~ '1985-2003',
+      yr >= 2004 ~ '2004-2024'
+    ),
+    qrt = factor(
+      lubridate::quarter(date),
+      levels = 1:4,
+      labels = c('JFM', 'AMJ', 'JAS', 'OND')
+    )
+  )
+
+# mean absolute difference
+totabqrt <- datprp |>
+  summarise(
+    mad = mean(abs(btfit - btnorm), na.rm = T),
+    .by = c(bay_segment, yrcat, qrt)
+  )
+totabann <- datprp |>
+  summarise(
+    mad = mean(abs(btfit - btnorm), na.rm = T),
+    .by = c(bay_segment, yrcat)
+  ) |>
+  mutate(
+    qrt = 'Annual'
+  )
+
+totab <- bind_rows(totabqrt, totabann) |>
+  mutate(
+    qrt = factor(
+      qrt,
+      levels = c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+    ),
+    mad = round(mad, 2)
+  ) |>
+  pivot_wider(
+    names_from = qrt,
+    values_from = mad
+  ) |>
+  select(bay_segment, yrcat, Annual, JFM, AMJ, JAS, OND)
+
+# color function
+colfun <- function(x) {
+  x[is.na(x)] <- min(x, na.rm = T)
+  pal <- RColorBrewer::brewer.pal(9, 'Greys')[5:9]
+  colorRampPalette(pal)(100)[as.numeric(cut(x, breaks = 100))]
+}
+
+# font size function
+fntfun <- function(x) {
+  x[is.na(x)] <- min(x, na.rm = T)
+  sizes <- seq(7, 11, length.out = 50)
+  sizes[as.numeric(cut(x, breaks = 50))]
+}
+
+# Pre-calculate font sizes for each column
+cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+ft_data <- totab |> as_grouped_data(groups = 'bay_segment')
+
+prdnrmtab <- ft_data |>
+  flextable() |>
+  set_header_labels(
+    bay_segment = 'Bay Segment',
+    yrcat = 'Year group'
+  ) |>
+  color(j = ~ Annual + JFM + AMJ + JAS + OND, color = colfun)
+
+# Apply font sizes for each cell
+font_sizes <- fntfun(unlist(ft_data[, cols])) |>
+  matrix(nrow = nrow(ft_data), ncol = length(cols)) |>
+  as.data.frame()
+names(font_sizes) <- cols
+for (col in cols) {
+  font_col <- font_sizes[[col]]
+  for (i in seq_along(font_col)) {
+    prdnrmtab <- fontsize(
+      prdnrmtab,
+      i = i,
+      j = col,
+      size = font_col[i],
+      part = 'body'
+    )
+  }
+}
+
+prdnrmtab <- prdnrmtab |>
+  padding(padding = 0, part = 'all') |>
+  bold(j = cols, part = 'body') |>
+  align(align = 'center', part = 'all', j = cols) |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  autofit()
+
+save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 
 # hydrology vs norm ------------------------------------------------------
 

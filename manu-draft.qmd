@@ -54,6 +54,7 @@ source(here('R/funcs.R'))
 
 load(file = here('tabs/gamtab.RData'))
 load(file = here('tabs/gamcrtab.RData'))
+load(file = here('tabs/prdnrmtab.RData'))
 load(file = here('tabs/hydnrmtab.RData'))
 ```
 
@@ -105,7 +106,7 @@ $$
 
 @fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salresp, @fig-hydnrm
 
-@tbl-gamtab, @tbl-gamcrtab, @tbl-hydnrmtab
+@tbl-gamtab, @tbl-gamcrtab, @tbl-prdnrmtab, @tbl-hydnrmtab
 
 ## Discussion
 
@@ -147,6 +148,14 @@ gamtab
 #| label: tbl-gamcrtab
 #| tbl-cap: !expr 'paste0("Correlations between monthly observed and predicted chlorophyll-a for different annual and seasonal periods for each bay segment. The Annual column shows the correlation for the entire year grouping (1985-2003 or 2004-2024) and the remaining columns show the seasonal correlations within the year group. Font shading and size is proportional to the strength of the correlations. See @tbl-gamtab for individual model summary statistics. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
 gamcrtab
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-prdnrmtab
+#| tbl-cap: !expr 'paste0("Mean absolute differences ($\\mu$g/L) between monthly predictions and salinity-normalized results for different annual and seasonal periods for each bay segment. The Annual column shows the differences for the entire year grouping (1985-2003 or 2004-2024) and the remaining columns show the seasonal differences within the year group. Font shading and size is proportional to the magnitude of the differences. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+prdnrmtab
 ```
 
 {{< pagebreak >}}
