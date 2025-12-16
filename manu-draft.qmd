@@ -53,6 +53,7 @@ library(here)
 source(here('R/funcs.R'))
 
 load(file = here('tabs/gamtab.RData'))
+load(file = here('tabs/gamcrtab.RData'))
 load(file = here('tabs/hydnrmtab.RData'))
 ```
 
@@ -104,7 +105,7 @@ $$
 
 @fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salresp, @fig-hydnrm
 
-@tbl-gamtab, @tbl-hydnrmtab
+@tbl-gamtab, @tbl-gamcrtab, @tbl-hydnrmtab
 
 ## Discussion
 
@@ -138,6 +139,14 @@ $$
 #| label: tbl-gamtab
 #| tbl-cap: !expr 'paste0("Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay.  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statitic (F), and p-value (p). `s()` indicates a single spline smooth for the predictor and `ti()` indicatees a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
 gamtab
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-gamcrtab
+#| tbl-cap: !expr 'paste0("Correlations between monthly observed and predicted chlorophyll-a for different annual and seasonal periods for each bay segment. The Annual column shows the correlation for the entire year grouping (1985-2003 or 2004-2024) and the remaining columns show the seasonal correlations within the year group. Font shading and size is proportional to the strength of the correlations. See @tbl-gamtab for individual model summary statistics. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+gamcrtab
 ```
 
 {{< pagebreak >}}
