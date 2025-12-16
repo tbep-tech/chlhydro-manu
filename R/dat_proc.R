@@ -8,62 +8,71 @@ source(here('R/funcs.R'))
 # data prep --------------------------------------------------------------
 
 # water quality
-wqdat <- epcdata |> 
-  filter(yr > 1975 & yr <= 2024) |> 
-  select(bay_segment, SampleTime, tn, chla, Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth) |>
+wqdat <- epcdata |>
+  filter(yr > 1975 & yr <= 2024) |>
+  select(
+    bay_segment,
+    SampleTime,
+    tn,
+    chla,
+    Sal_Top_ppth,
+    Sal_Mid_ppth,
+    Sal_Bottom_ppth
+  ) |>
   mutate(
-    sal = Sal_Top_ppth, #mean(c(Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth), na.rm = T), 
+    sal = Sal_Top_ppth, #mean(c(Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth), na.rm = T),
     .by = c(bay_segment, SampleTime)
-  ) |> 
+  ) |>
   mutate(
     date = floor_date(as.Date(SampleTime), unit = 'month')
-  ) |> 
+  ) |>
   summarise(
-    tn = mean(tn, na.rm = T), 
-    chla = mean(chla, na.rm = T), 
+    tn = mean(tn, na.rm = T),
+    chla = mean(chla, na.rm = T),
     sal = mean(sal, na.rm = T),
     .by = c(bay_segment, date)
-  ) |> 
+  ) |>
   mutate(
-    dec_time = decimal_date(date), 
+    dec_time = decimal_date(date),
     doy = yday(date),
     chla = ifelse(chla == 0, NA, chla),
     bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
-  ) |> 
-  arrange(bay_segment, date) |> 
+  ) |>
+  arrange(bay_segment, date) |>
   mutate(
     salorig = sal,
-    sal = zoo::na.approx(salorig, x = date, na.rm = F, maxgap = 3), 
+    sal = zoo::na.approx(salorig, x = date, na.rm = F, maxgap = 3),
     .by = c(bay_segment)
   )
 
 save(wqdat, file = here('data/wqdat.RData'))
 
 # salinity NA by bay segment
-wqdat |> 
+wqdat |>
   summarise(
     n_sal_na = sum(is.na(salorig)),
     n_tot = n(),
     .by = c(bay_segment)
-  ) |> 
+  ) |>
   mutate(
     perc_na = n_sal_na / n_tot * 100
   )
 
 # OTB model --------------------------------------------------------------
 
-tomod <- wqdat |> 
+tomod <- wqdat |>
   filter(bay_segment == 'HB')
 
-mod <- gam(chla ~ s(dec_time, k = 40, bs = 'tp') + 
-  s(doy, k = 10, bs = 'cc') + 
-  s(sal, k = 10) +
-  ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-  ti(dec_time, sal, k = c(5, 5)) +
-  ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')),
+mod <- gam(
+  chla ~ s(dec_time, k = 40, bs = 'tp') +
+    s(doy, k = 10, bs = 'cc') +
+    s(sal, k = 10) +
+    ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(dec_time, sal, k = c(5, 5)) +
+    ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')),
   data = tomod,
   family = Gamma(link = 'log'),
-  knots = list(doy=c(0,366)),
+  knots = list(doy = c(0, 366)),
   method = 'REML'
 )
 
@@ -80,21 +89,28 @@ ggplot(prds, aes(x = dec_time, y = chla)) +
 grid_plo(prds, month = 'all', allsal = T)
 grid_plo(prds, month = 'all', allsal = T, years = c(2000, 2024))
 grid_plo(prds)
-grid_plo(prds, month = c(5:10), years = c(2000, 2024), allsal = F, ncol = 6, sal_fac = 6)
+grid_plo(
+  prds,
+  month = c(5:10),
+  years = c(2000, 2024),
+  allsal = F,
+  ncol = 6,
+  sal_fac = 6
+)
 
-toplo <- data.frame(prds) |> 
+toplo <- data.frame(prds) |>
   mutate(
     yr = lubridate::year(date)
-  ) |> 
+  ) |>
   summarise(
-    btfit = mean(btfit, na.rm = T), 
+    btfit = mean(btfit, na.rm = T),
     btnorm = mean(btnorm, na.rm = T),
     .by = c(yr)
   )
 
 ggplot(toplo, aes(x = yr, y = btfit)) +
-  geom_point() + 
-  geom_line(aes(y = btnorm), color = 'red') + 
+  geom_point() +
+  geom_line(aes(y = btnorm), color = 'red') +
   theme_minimal()
 
 toplo <- data.frame(prds)
@@ -107,34 +123,39 @@ ggplot(toplo, aes(x = date, y = chla)) +
 
 # all bay segments -------------------------------------------------------
 
-mods <- wqdat |> 
+mods <- wqdat |>
   # filter(dec_time >= 2000) |>
-  group_nest(bay_segment) |> 
+  group_nest(bay_segment) |>
   mutate(
-    mod = map(data, ~ gam(chla ~ s(dec_time, k = 40, bs = 'tp') + 
-          s(doy, k = 10, bs = 'cc') + 
+    mod = map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
           s(sal, k = 10) +
           ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
           ti(dec_time, sal, k = c(5, 5)) +
           ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')),
         data = .x,
-        knots = list(doy=c(0,366)),
+        knots = list(doy = c(0, 366)),
         family = Gamma(link = 'log'),
         method = 'REML'
       )
     ),
-    prds = map2(data, mod, pred_fun), 
-    annsum = map(prds, ~ data.frame(.x) |>
-      mutate(
-        yr = lubridate::year(date)
-      ) |> 
-      summarise(
-        chla = mean(chla, na.rm = T),
-        btfit = mean(btfit, na.rm = T), 
-        btnorm = mean(btnorm, na.rm = T),
-        meansalfit = mean(meansalfit, na.rm = T),
-        .by = c(yr)
-      )
+    prds = map2(data, mod, pred_fun),
+    annsum = map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          meansalfit = mean(meansalfit, na.rm = T),
+          .by = c(yr)
+        )
     )
   )
 
@@ -159,8 +180,8 @@ summary(mods$mod[[2]])$dev.expl
 summary(mods$mod[[3]])$dev.expl
 summary(mods$mod[[4]])$dev.expl
 
-toplo <- mods |> 
-  select(bay_segment, prds) |> 
+toplo <- mods |>
+  select(bay_segment, prds) |>
   mutate(prds = purrr::map(prds, as_tibble)) |>
   unnest(prds)
 
@@ -168,27 +189,27 @@ ggplot(toplo, aes(x = log(chla), y = fit)) +
   geom_point() +
   geom_abline(slope = 1, intercept = 0, color = 'red') +
   geom_smooth(method = 'lm', color = 'blue', se = F, formula = y ~ x) +
-  facet_wrap(~ bay_segment, scales = 'free') +
+  facet_wrap(~bay_segment, scales = 'free') +
   theme_minimal()
 
 # use toplo to get r2 between logchla and fit
-r2vals <- toplo |> 
+r2vals <- toplo |>
   mutate(
     logchla = log(chla)
-  ) |> 
+  ) |>
   summarise(
     r2 = cor(logchla, fit, use = 'complete.obs')^2,
     .by = bay_segment
   )
 
-toplo <- mods |> 
+toplo <- mods |>
   select(bay_segment, prds) |>
   mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds) |> 
+  unnest(prds) |>
   mutate(
     mo = lubridate::month(date)
-  ) |> 
-  filter(dec_time >= 2004 & dec_time <= 2024) |> 
+  ) |>
+  filter(dec_time >= 2004 & dec_time <= 2024) |>
   filter(mo %in% 6:11)
 
 ggplot(toplo, aes(x = chla, y = btfit)) +
@@ -199,20 +220,35 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
 
 # residuals and hydro load -----------------------------------------------
 
-mohydatraw <- rdataload('https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mohydat.RData')
+mohydatraw <- rdataload(
+  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mohydat.RData'
+)
 
-hydat <- mohydatraw |> 
-  filter(!bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')) |> 
+hydat <- mohydatraw |>
+  filter(
+    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
+  ) |>
   rename(
     yr = year,
     mo = month
-  ) |> 
+  ) |>
   mutate(
-    bay_segment = factor(bay_segment,
-      levels = c('Old Tampa Bay', 'Hillsborough Bay', 'Middle Tampa Bay', 'Lower Tampa Bay'), 
-     labels = c('OTB', 'HB', 'MTB', 'LTB')), 
+    bay_segment = factor(
+      bay_segment,
+      levels = c(
+        'Old Tampa Bay',
+        'Hillsborough Bay',
+        'Middle Tampa Bay',
+        'Lower Tampa Bay'
+      ),
+      labels = c('OTB', 'HB', 'MTB', 'LTB')
+    ),
     date = make_date(year = yr, month = mo, day = 1),
-    qrt = factor(lubridate::quarter(date), levels = 1:4, labels = c('JFM', 'AMJ', 'JAS', 'OND')),
+    qrt = factor(
+      lubridate::quarter(date),
+      levels = 1:4,
+      labels = c('JFM', 'AMJ', 'JAS', 'OND')
+    ),
   )
 
 save(hydat, file = here('data/hydat.RData'))
