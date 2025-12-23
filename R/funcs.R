@@ -52,7 +52,7 @@ p_txt <- function(x, addp = TRUE) {
 # model rsq, same as summary(mod)$dev.expl
 rsq_fun <- function(mod) {
   # get complete cases
-  toeval <- data.frame(resid = mod$residuals, obs = mod$y)
+  toeval <- data.frame(resid = mod$fit0.5 - mod$res, obs = mod$res)
   toeval <- na.omit(toeval)
 
   ssr <- sum(toeval$resid^2)
@@ -165,7 +165,7 @@ grid_plo <- function(
   }
 
   # format predictions as wide
-  to_plo <- attr(prds, 'btfits')
+  to_plo <- attr(prds, 'fits')[[1]]
 
   # model data with date column
   moddat <- data.frame(prds) |>
@@ -175,7 +175,7 @@ grid_plo <- function(
     )
 
   # salinity grid values
-  salgrd <- attr(prds, 'salgrd')
+  salgrd <- attr(prds, 'flo_grd')
 
   # convert month vector to those present in data
   month <- month[month %in% to_plo$month]
@@ -217,16 +217,9 @@ grid_plo <- function(
   # change sal to original scale
   if (!salscl) {
     # grid data
-    salobs_rng <- range(moddat$sal, na.rm = TRUE)
+    salobs_rng <- attr(prds, 'floobs_rng')
     salscl_rng <- range(to_plo$sal, na.rm = TRUE)
     to_plo$sal <- (to_plo$sal - salscl_rng[1]) /
-      diff(salscl_rng) *
-      diff(salobs_rng) +
-      salobs_rng[1]
-
-    #input data
-    salscl_rng <- range(prddat$sal, na.rm = TRUE)
-    prddat$sal <- (prddat$sal - salscl_rng[1]) /
       diff(salscl_rng) *
       diff(salobs_rng) +
       salobs_rng[1]

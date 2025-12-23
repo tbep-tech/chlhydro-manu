@@ -13,13 +13,14 @@ load(file = here('data/hydat.RData'))
 
 toplo <- mods |>
   mutate(
-    devexpl = purrr::map(mod, ~ summary(.x)$dev.expl)
+    devexpl = purrr::map(mod, ~ rsq_fun(.x))
   ) |>
-  select(bay_segment, prds, devexpl) |>
+  select(bay_segment, mod, devexpl) |>
   unnest(devexpl) |>
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds) |>
+  unnest(mod) |>
   mutate(
+    chla = exp(res),
+    btfit = exp(fit0.5),
     striplab = paste0(round(devexpl * 100, 0), '% dev. expl.')
   )
 
@@ -111,23 +112,30 @@ dev.off()
 # predicted and normalized annual ----------------------------------------
 
 toplo <- mods |>
-  select(bay_segment, annsum) |>
-  unnest(annsum)
+  mutate(
+    annsum = map(mod, function(x) {
+      fit <- prdnrmplot(x, annuals = T, plot = F, logspace = F)$fits |>
+        mutate(var = 'btfit') |>
+        rename(value = fits_value)
+      nrm <- prdnrmplot(x, annuals = T, plot = F, logspace = F)$nrms |>
+        mutate(var = 'btnorm') |>
+        rename(value = nrms_value)
+      bind_rows(fit, nrm) |>
+        pivot_wider(names_from = var, values_from = value)
+    })
+  ) |>
+  select(-data, -mod) |>
+  unnest(annsum) |>
+  mutate(
+    yr = year(date)
+  )
 
 p <- ggplot(toplo, aes(x = yr, y = btfit)) +
   geom_point(aes(fill = "Predicted"), color = 'black') +
-  geom_line(aes(y = btnorm, color = "Normalized", linetype = "Normalized")) +
-  geom_line(aes(
-    y = meansalfit,
-    color = "Mean Salinity",
-    linetype = "Mean Salinity"
-  )) +
+  geom_line(aes(y = btnorm, color = "Normalized")) +
   # coord_cartesian(xlim = c(2000, 2024)) +
-  scale_linetype_manual(
-    values = c("Normalized" = "solid", "Mean Salinity" = "dashed")
-  ) +
   scale_color_manual(
-    values = c("Normalized" = "tomato1", "Mean Salinity" = "blue")
+    values = c("Normalized" = "tomato1")
   ) +
   scale_fill_manual(values = c("Predicted" = "black")) +
   facet_wrap(~bay_segment, scales = 'free_y') +
@@ -140,7 +148,6 @@ p <- ggplot(toplo, aes(x = yr, y = btfit)) +
     x = NULL,
     color = NULL,
     fill = NULL,
-    linetype = NULL,
     y = 'Annual Chl-a (µg/L)',
   )
 
@@ -150,12 +157,37 @@ dev.off()
 
 # grid plot --------------------------------------------------------------
 
+gridplot(
+  mods$mod[[1]],
+  month = c(6:11),
+  years = c(2004, 2024),
+  allflo = T,
+  ncol = 6,
+  sal_fac = 6,
+  logspace = F,
+  floscl = F
+) +
+  theme_minimal() +
+  theme(legend.position = 'top') +
+  labs(title = mods$bay_segment[[1]])
+
 prdplo <- mods |>
-  select(bay_segment, prds) |>
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds) |>
-  select(bay_segment, date, sal, res = btfit) |>
+  select(bay_segment, mod) |>
   mutate(
+    mod = map(mod, function(x) {
+      floobs_rng <- attr(x, 'floobs_rng')
+      floscl_rng <- range(x$flo, na.rm = TRUE)
+      x$sal <- (x$flo - floscl_rng[1]) /
+        diff(floscl_rng) *
+        diff(floobs_rng) +
+        floobs_rng[1]
+      x
+    })
+  ) |>
+  unnest(mod) |>
+  select(bay_segment, date, sal, res = fit0.5) |>
+  mutate(
+    res = exp(res),
     month = lubridate::month(date, label = T, abbr = F),
     yr = lubridate::year(date)
   ) |>
@@ -165,15 +197,17 @@ grds <- mods |>
   mutate(
     plo = map2(
       bay_segment,
-      prds,
+      mod,
       ~ grid_plo(
         .y,
         month = c(6:11),
         years = c(2004, 2024),
-        col_lim = c(1, 30),
-        allsal = F,
+        allflo = T,
         ncol = 6,
-        sal_fac = 6
+        sal_fac = 6,
+        logspace = F,
+        floscl = F,
+        col_lim = c(0, 80)
       ) +
         labs(title = .x) +
         geom_line(
@@ -198,8 +232,9 @@ p <- grds$plo[[1]] +
   grds$plo[[2]] +
   grds$plo[[3]] +
   grds$plo[[4]] +
-  plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect_y') &
-  theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
+  plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect') &
+  theme_minimal() &
+  theme(legend.position = 'right', axis.text.x = element_text(size = 7))
 
 png(here('figs/gridplo.png'), width = 11, height = 9, units = 'in', res = 300)
 print(p)
