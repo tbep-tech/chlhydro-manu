@@ -155,6 +155,7 @@ grid_plo <- function(
   ncol = NULL,
   grids = FALSE,
   pretty = TRUE,
+  log_space = FALSE,
   ...
 ) {
   # convert month vector to those present in data
@@ -172,7 +173,8 @@ grid_plo <- function(
     filter(
       lubridate::year(date) >= min(to_plo$year) &
         lubridate::year(date) <= max(to_plo$year)
-    )
+    ) |>
+    rename(sal = flo)
 
   # salinity grid values
   salgrd <- attr(prds, 'flo_grd')
@@ -208,14 +210,20 @@ grid_plo <- function(
   names(to_plo)[grep('^X', names(to_plo))] <- paste('sal', salgrd)
   to_plo <- tidyr::gather(to_plo, 'sal', 'res', 5:ncol(to_plo)) |>
     mutate(sal = as.numeric(gsub('^sal ', '', sal))) |>
-    select(-date, -day) |>
+    select(-date, -day)
+
+  if (!log_space) {
+    to_plo <- to_plo |> mutate(res = exp(res))
+  }
+
+  to_plo <- to_plo |>
     summarize(
       res = mean(res, na.rm = TRUE),
       .by = c(year, month, sal)
     )
 
   # change sal to original scale
-  if (!salscl) {
+  if (salscl) {
     # grid data
     salobs_rng <- attr(prds, 'floobs_rng')
     salscl_rng <- range(to_plo$sal, na.rm = TRUE)
@@ -312,7 +320,16 @@ grid_plo <- function(
 
   # constrain plots to salinity limits for the selected month
   if (!allsal & !allmo) {
-    #min, max salinity values to plot
+    if (salscl) {
+      # recreate salinity from flo in moddat
+      salobs_rng <- attr(prds, 'floobs_rng')
+      salscl_rng <- range(moddat$sal, na.rm = TRUE)
+      moddat$sal <- (moddat$sal - salscl_rng[1]) /
+        diff(salscl_rng) *
+        diff(salobs_rng) +
+        salobs_rng[1]
+    }
+
     lim_vals <- moddat |>
       mutate(
         month = lubridate::month(date),
@@ -343,6 +360,15 @@ grid_plo <- function(
 
   # contstrain all data by quantiles if not separated by month
   if (!allsal & allmo) {
+    if (salscl) {
+      # recreate salinity from flo in moddat
+      salobs_rng <- attr(prds, 'floobs_rng')
+      salscl_rng <- range(moddat$sal, na.rm = TRUE)
+      moddat$sal <- (moddat$sal - salscl_rng[1]) /
+        diff(salscl_rng) *
+        diff(salobs_rng) +
+        salobs_rng[1]
+    }
     quants <- moddat |>
       pull(sal) |>
       quantile(c(0.05, 0.95), na.rm = TRUE)

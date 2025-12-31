@@ -1,7 +1,7 @@
 library(tidyverse)
 library(here)
 library(patchwork)
-library(mgcv)
+library(WRTDStidal)
 
 source(here('R/funcs.R'))
 
@@ -193,6 +193,17 @@ prdplo <- mods |>
   ) |>
   filter(yr >= 2004 & yr <= 2024 & month %in% month.name[6:11])
 
+grid_plo(
+  mods$mod[[1]],
+  month = c(6:11),
+  years = c(2004, 2024),
+  allflo = T,
+  ncol = 6,
+  sal_fac = 6,
+  logspace = T,
+  salscl = F
+)
+
 grds <- mods |>
   mutate(
     plo = map2(
@@ -202,12 +213,12 @@ grds <- mods |>
         .y,
         month = c(6:11),
         years = c(2004, 2024),
-        allflo = T,
+        allsal = F,
         ncol = 6,
         sal_fac = 6,
         logspace = F,
-        floscl = F,
-        col_lim = c(0, 80)
+        salscl = T,
+        col_lim = c(2, 32)
       ) +
         labs(title = .x) +
         geom_line(
@@ -233,8 +244,7 @@ p <- grds$plo[[1]] +
   grds$plo[[3]] +
   grds$plo[[4]] +
   plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect') &
-  theme_minimal() &
-  theme(legend.position = 'right', axis.text.x = element_text(size = 7))
+  theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
 
 png(here('figs/gridplo.png'), width = 11, height = 9, units = 'in', res = 300)
 print(p)
