@@ -157,20 +157,6 @@ dev.off()
 
 # grid plot --------------------------------------------------------------
 
-gridplot(
-  mods$mod[[1]],
-  month = c(6:11),
-  years = c(2004, 2024),
-  allflo = T,
-  ncol = 6,
-  sal_fac = 6,
-  logspace = F,
-  floscl = F
-) +
-  theme_minimal() +
-  theme(legend.position = 'top') +
-  labs(title = mods$bay_segment[[1]])
-
 prdplo <- mods |>
   select(bay_segment, mod) |>
   mutate(
@@ -192,17 +178,6 @@ prdplo <- mods |>
     yr = lubridate::year(date)
   ) |>
   filter(yr >= 2004 & yr <= 2024 & month %in% month.name[6:11])
-
-grid_plo(
-  mods$mod[[1]],
-  month = c(6:11),
-  years = c(2004, 2024),
-  allflo = T,
-  ncol = 6,
-  sal_fac = 6,
-  logspace = T,
-  salscl = F
-)
 
 grds <- mods |>
   mutate(
@@ -253,68 +228,85 @@ dev.off()
 # salinity response by year ----------------------------------------------
 
 dec_time <- c(1980, 2020)
-doy <- yday(as.Date(c('1975-02-15', '1975-05-15', '1975-08-15', '1975-11-15')))
+dys <- c('-02-15', '-05-15', '-08-15', '-11-15')
+slc <- expand.grid(dec_time, dys) |>
+  unite('doy', Var1, Var2, sep = '') |>
+  pull(doy) |>
+  as.Date() |>
+  sort() |>
+  decimal_date()
 
 plos <- mods |>
   mutate(
     salplo = pmap(
-      list(mod, prds, bay_segment),
-      function(mod, prds, bay_segment) {
-        bayseg <- bay_segment
+      list(mod, data, bay_segment),
+      function(mod, data, bay_segment) {
         # get salinity ranges
         prdgrd <- wqdat |>
-          select(date, sal, bay_segment) |>
-          filter(bay_segment %in% bayseg) |>
           mutate(
             yr = year(date),
             anngrp = case_when(
-              yr %in% c(1975:1985) ~ 1980,
-              yr %in% 2015:2024 ~ 2020,
-              T ~ NA_real_
+              yr %in% 1975:2004 ~ '1975 - 2004',
+              # yr %in% 1986:1995 ~ '1986 - 1995',
+              # yr %in% 1991:2009 ~ '1991 - 2009',
+              # yr %in% 2006:2015 ~ '2006 - 2015',
+              yr %in% 2005:2024 ~ '2005 - 2024',
+              T ~ NA_character_
             ),
-            qrt = quarter(date),
-            qrt = factor(
-              qrt,
-              levels = 1:4,
-              labels = c('Feb', 'May', 'Aug', 'Nov')
-            )
+            mo = month(date),
+            qrt = quarter(date)
           ) |>
+          filter(mo %in% c(2, 5, 8, 11)) |>
           filter(!is.na(anngrp)) |>
           summarise(
             salmin = quantile(sal, 0.05, na.rm = T),
             salmax = quantile(sal, 0.95, na.rm = T),
-            .by = c(qrt, anngrp)
-          ) |>
-          group_by(qrt, anngrp) |>
-          nest() |>
-          mutate(
-            sal = map(data, ~ seq(.x$salmin, .x$salmax, length.out = 20))
-          ) |>
-          select(-data) |>
-          unnest(cols = c(sal)) |>
-          mutate(
-            doy = case_when(
-              qrt == 'Feb' ~ yday(as.Date('1975-02-15')),
-              qrt == 'May' ~ yday(as.Date('1975-05-15')),
-              qrt == 'Aug' ~ yday(as.Date('1975-08-15')),
-              qrt == 'Nov' ~ yday(as.Date('1975-11-15')),
-            ),
-            dec_time = anngrp
+            .by = c(mo, anngrp)
           )
 
-        prds <- predict(mod, newdata = prdgrd, type = 'response', se.fit = TRUE)
-        toplo <- as_tibble(prdgrd) |>
+        # reformat grid predictions in salinity space
+        salgrd <- attr(mod, 'flo_grd')
+        prds <- attr(mod, 'fits')$`fit0.5`
+        names(prds)[grep('^X', names(prds))] <- paste('sal', salgrd)
+        prds <- tidyr::gather(prds, 'sal', 'res', 5:ncol(prds)) |>
+          mutate(sal = as.numeric(gsub('^sal ', '', sal))) |>
+          select(-month, -day)
+
+        salobs_rng <- attr(mod, 'floobs_rng')
+        salscl_rng <- range(prds$sal, na.rm = TRUE)
+        prds$sal <- (prds$sal - salscl_rng[1]) /
+          diff(salscl_rng) *
+          diff(salobs_rng) +
+          salobs_rng[1]
+
+        toplo <- prds |>
           mutate(
-            btfit = prds$fit,
-            btupr = prds$fit + (1.96 * prds$se.fit),
-            btlwr = prds$fit - (1.96 * prds$se.fit),
-            date = as.Date(date_decimal(dec_time)),
-            qrt = factor(
-              doy,
-              levels = !!doy,
-              labels = c('Feb', 'May', 'Aug', 'Nov')
+            anngrp = case_when(
+              year %in% 1975:2004 ~ '1975 - 2004',
+              # year %in% 1986:1995 ~ '1986 - 1995',
+              # year %in% 1991:2009 ~ '1991 - 2009',
+              # year %in% 2006:2015 ~ '2006 - 2015',
+              year %in% 2005:2024 ~ '2005 - 2024',
+              T ~ NA_character_
             ),
-            year = year(date)
+            qrt = quarter(date),
+            mo = month(date)
+          ) |>
+          inner_join(prdgrd, by = c('anngrp', 'mo')) |>
+          filter(sal >= salmin & sal <= salmax) |>
+          mutate(
+            res = exp(res),
+            qrt = factor(
+              qrt,
+              levels = 1:4,
+              labels = c('JFM', 'AMJ', 'JAS', 'OND')
+            )
+          ) |>
+          summarise(
+            btfit = mean(res, na.rm = T),
+            btlwr = t.test(res)$conf.int[1], #quantile(res, 0.05, na.rm = T),
+            btupr = t.test(res)$conf.int[2], #quantile(res, 0.95, na.rm = T),
+            .by = c(sal, anngrp, mo)
           )
 
         p <- ggplot(
@@ -322,9 +314,9 @@ plos <- mods |>
           aes(
             x = sal,
             y = btfit,
-            group = year,
-            color = factor(year),
-            fill = factor(year)
+            group = anngrp,
+            color = anngrp,
+            fill = anngrp
           )
         ) +
           geom_ribbon(
@@ -332,14 +324,13 @@ plos <- mods |>
             alpha = 0.3,
             color = NA
           ) +
-          # scale_y_log10() +
           geom_line() +
-          facet_wrap(~qrt, ncol = 4) + #, scales = 'free_y') +
+          facet_wrap(~mo, ncol = 4, scales = 'free_y') +
           labs(
             x = 'Salinity (ppth)',
             y = 'Chl-a (µg/L)',
-            fill = 'Year',
-            color = 'Year',
+            fill = 'Annual Group',
+            color = 'Annual Group',
             subtitle = bay_segment
           ) +
           theme_minimal()
