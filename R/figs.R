@@ -227,14 +227,18 @@ dev.off()
 
 # salinity response by year ----------------------------------------------
 
-dec_time <- c(1980, 2020)
-dys <- c('-02-15', '-05-15', '-08-15', '-11-15')
-slc <- expand.grid(dec_time, dys) |>
-  unite('doy', Var1, Var2, sep = '') |>
-  pull(doy) |>
-  as.Date() |>
-  sort() |>
-  decimal_date()
+lns <- tibble(
+  bay_segment = c('OTB', 'HB', 'MTB', 'LTB'),
+  thresh = c(9.3, 15, 8.5, 5.1)
+) |>
+  crossing(seas = c('Dry Season', 'Wet Season', 'Full Year')) |>
+  mutate(
+    thresh = ifelse(seas %in% c('Dry Season', 'Wet Season'), NA, thresh),
+    seas = factor(
+      seas,
+      levels = c('Dry Season', 'Wet Season', 'Full Year')
+    )
+  )
 
 plos <- mods |>
   mutate(
@@ -251,7 +255,7 @@ plos <- mods |>
             anngrp = case_when(
               yr %in% 1975:1990 ~ '1975 - 1990',
               # yr %in% 1986:1995 ~ '1986 - 1995',
-              yr %in% 1991:2009 ~ '1991 - 2009',
+              yr %in% 1992:1994 ~ '1992 - 1994',
               # yr %in% 2006:2015 ~ '2006 - 2015',
               yr %in% 2010:2024 ~ '2010- 2024',
               T ~ NA_character_
@@ -264,13 +268,19 @@ plos <- mods |>
               T ~ NA_character_
             )
           ) |>
-          # filter(!is.na(seas)) |>
-          # filter(mo %in% c(2, 5, 8, 11)) |>
-          filter(!is.na(anngrp)) |>
+          filter(!is.na(anngrp))
+
+        prdgrdseas <- prdgrd |>
           summarise(
             salmin = quantile(sal, 0.05, na.rm = T),
             salmax = quantile(sal, 0.95, na.rm = T),
             .by = c(seas, anngrp)
+          )
+        prdgrdall <- prdgrd |>
+          summarise(
+            salmin = quantile(sal, 0.05, na.rm = T),
+            salmax = quantile(sal, 0.95, na.rm = T),
+            .by = anngrp
           )
 
         # reformat grid predictions in salinity space
@@ -293,7 +303,7 @@ plos <- mods |>
             anngrp = case_when(
               year %in% 1975:1990 ~ '1975 - 1990',
               # year %in% 1986:1995 ~ '1986 - 1995',
-              year %in% 1991:2009 ~ '1991 - 2009',
+              year %in% 1992:1994 ~ '1992 - 1994',
               # year %in% 2006:2015 ~ '2006 - 2015',
               year %in% 2010:2024 ~ '2010- 2024',
               T ~ NA_character_
@@ -305,22 +315,32 @@ plos <- mods |>
               mo %in% c(6, 7, 8, 9) ~ 'Wet',
               T ~ NA_character_
             )
-          ) |>
-          inner_join(prdgrd, by = c('anngrp', 'seas')) |>
+          )
+
+        toploa <- toplo |>
+          inner_join(prdgrdseas, by = c('anngrp', 'seas')) |>
+          filter(sal >= salmin & sal <= salmax)
+
+        toplob <- toplo |>
+          inner_join(prdgrdall, by = c('anngrp')) |>
           filter(sal >= salmin & sal <= salmax) |>
+          mutate(seas = 'All')
+
+        toplo <- bind_rows(toploa, toplob) |>
           mutate(
-            res = exp(res),
-            qrt = factor(
-              qrt,
-              levels = 1:4,
-              labels = c('JFM', 'AMJ', 'JAS', 'OND')
-            )
+            seas = factor(
+              seas,
+              levels = c('Dry', 'Wet', 'All'),
+              labels = c('Dry Season', 'Wet Season', 'Full Year')
+            ),
+            res = exp(res)
           ) |>
+          group_by(seas, anngrp, sal) |>
           summarise(
             btfit = mean(res, na.rm = T),
-            btlwr = t.test(res)$conf.int[1], #quantile(res, 0.05, na.rm = T),
-            btupr = t.test(res)$conf.int[2], #quantile(res, 0.95, na.rm = T),
-            .by = c(sal, anngrp, seas)
+            btlwr = t.test(res)$conf.int[1],
+            btupr = t.test(res)$conf.int[2],
+            .groups = 'drop'
           )
 
         p <- ggplot(
@@ -339,17 +359,22 @@ plos <- mods |>
             color = NA
           ) +
           geom_line() +
+          geom_hline(
+            data = lns |> filter(bay_segment == bayseg),
+            aes(yintercept = thresh),
+            linetype = 'dotted'
+          ) +
           scale_color_manual(
             values = c(
               '1975 - 1990' = 'darkblue',
-              '1991 - 2009' = 'darkgreen',
+              '1992 - 1994' = 'darkgreen',
               '2010- 2024' = 'darkred'
             )
           ) +
           scale_fill_manual(
             values = c(
               '1975 - 1990' = 'darkblue',
-              '1991 - 2009' = 'darkgreen',
+              '1992 - 1994' = 'darkgreen',
               '2010- 2024' = 'darkred'
             )
           ) +
@@ -378,7 +403,7 @@ p <- plos$salplo[[1]] +
     panel.grid.minor = element_blank()
   )
 
-png(here('figs/salresp.png'), width = 8, height = 8, units = 'in', res = 300)
+png(here('figs/salresp.png'), width = 5, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
