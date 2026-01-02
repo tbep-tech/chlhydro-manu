@@ -45,6 +45,56 @@ wqdat <- epcdata |>
     .by = c(bay_segment)
   )
 
+# loading data
+
+mosdat <- rdataload(
+  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mosdat.RData'
+) |>
+  filter(
+    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
+  ) |>
+  rename(
+    yr = year,
+    mo = month
+  ) |>
+  mutate(
+    bay_segment = factor(
+      bay_segment,
+      levels = c(
+        'Old Tampa Bay',
+        'Hillsborough Bay',
+        'Middle Tampa Bay',
+        'Lower Tampa Bay'
+      ),
+      labels = c('OTB', 'HB', 'MTB', 'LTB')
+    ),
+    date = make_date(year = yr, month = mo, day = 1)
+  ) |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  left_join(mosdat, by = c('bay_segment', 'date'))
+
 save(wqdat, file = here('data/wqdat.RData'))
 
 # salinity NA by bay segment
@@ -61,20 +111,57 @@ wqdat |>
 # OTB model --------------------------------------------------------------
 
 tomod <- wqdat |>
-  filter(bay_segment == 'HB')
+  filter(bay_segment == 'OTB') |>
+  filter(!is.na(tn_load))
 
 mod <- gam(
   chla ~ s(dec_time, k = 40, bs = 'tp') +
     s(doy, k = 10, bs = 'cc') +
     s(sal, k = 10) +
+    s(tn_load, k = 10) +
     ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
     ti(dec_time, sal, k = c(5, 5)) +
-    ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')),
+    ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+    ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
   data = tomod,
   family = Gamma(link = 'log'),
   knots = list(doy = c(0, 366)),
   method = 'REML'
 )
+
+toprd1 <- crossing(
+  tn_load = c(max(tomod$tn_load, na.rm = T), min(tomod$tn_load, na.rm = T)),
+  sal = c(max(tomod$sal, na.rm = T), min(tomod$sal, na.rm = T)),
+  tomod |> select(-tn_load, -sal)
+)
+
+prd1 <- toprd1 |>
+  mutate(
+    prd = predict(mod, newdata = toprd1, type = 'response')
+  ) |>
+  mutate(
+    loadcond = case_when(
+      tn_load == max(tomod$tn_load, na.rm = T) ~ 'highload',
+      tn_load == min(tomod$tn_load, na.rm = T) ~ 'loload'
+    ),
+    salcond = case_when(
+      sal == max(tomod$sal, na.rm = T) ~ 'highsal',
+      sal == min(tomod$sal, na.rm = T) ~ 'losal'
+    ),
+    yr = year(date)
+  ) |>
+  summarise(
+    prd = mean(prd, na.rm = T),
+    .by = c(yr, loadcond, salcond)
+  )
+
+ggplot(prd1, aes(x = yr, y = prd, color = loadcond)) +
+  geom_line() +
+  facet_wrap(~salcond) +
+  theme_minimal()
+
 
 summary(mod)$dev.expl
 gam.check(mod)
@@ -83,7 +170,8 @@ prds <- pred_fun(tomod, mod)
 
 ggplot(prds, aes(x = dec_time, y = chla)) +
   geom_point() +
-  geom_line(aes(y = btfit), color = 'red')
+  geom_line(aes(y = btfit), color = 'red') +
+  geom_line(aes(y = btfithi), color = 'blue')
 
 
 grid_plo(prds, month = 'all', allsal = T)
@@ -102,23 +190,53 @@ toplo <- data.frame(prds) |>
   mutate(
     yr = lubridate::year(date)
   ) |>
+  select(
+    date,
+    yr,
+    btfit,
+    btfithi,
+    btfitlo,
+    btfitmd,
+    btnorm,
+    btnormhi,
+    btnormlo,
+    btnormmd
+  ) |>
+  pivot_longer(
+    cols = -c(date, yr),
+    names_to = 'var',
+    values_to = 'value'
+  ) |>
+  mutate(
+    nrmval = ifelse(grepl('norm', var, ignore.case = T), 'norm', 'fit'),
+    est = case_when(
+      grepl('hi', var, ignore.case = T) ~ 'hi',
+      grepl('lo', var, ignore.case = T) ~ 'lo',
+      grepl('md', var, ignore.case = T) ~ 'md',
+      TRUE ~ 'obs'
+    )
+  ) |>
   summarise(
-    btfit = mean(btfit, na.rm = T),
-    btnorm = mean(btnorm, na.rm = T),
-    .by = c(yr)
+    val = mean(value, na.rm = T),
+    .by = c(yr, nrmval, est)
+  ) |>
+  pivot_wider(
+    names_from = c(nrmval),
+    values_from = val
   )
 
-ggplot(toplo, aes(x = yr, y = btfit)) +
+ggplot(toplo, aes(x = yr, y = fit)) +
   geom_point() +
-  geom_line(aes(y = btnorm), color = 'red') +
+  geom_line(aes(y = norm)) +
+  facet_wrap(~est, scales = 'free') +
   theme_minimal()
 
 toplo <- data.frame(prds)
 
-ggplot(toplo, aes(x = date, y = chla)) +
+ggplot(toplo, aes(x = yr, y = fit, group = est, color = est)) +
   geom_point() +
-  geom_line(aes(y = btfit), color = 'red') +
-  geom_line(aes(y = btnorm), color = 'blue') +
+  geom_line(aes(y = norm)) +
+  facet_wrap(~nrmval, scales = 'free') +
   theme_minimal()
 
 # all bay segments -------------------------------------------------------

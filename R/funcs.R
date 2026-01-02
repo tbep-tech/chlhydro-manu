@@ -62,78 +62,127 @@ rsq_fun <- function(mod) {
 
   return(out)
 }
+# get salinity prediction grids
+fits_fun <- function(modin, toprd, salgrd, type = 'link') {
+  tibble(
+    res = as.numeric(predict(modin, newdata = toprd, type = type))
+  ) |>
+    bind_cols(toprd) |>
+    mutate(
+      year = lubridate::year(date),
+      month = lubridate::month(date),
+      day = lubridate::day(date),
+      sal = factor(
+        sal,
+        levels = salgrd,
+        labels = paste0('X', seq(1:length(salgrd)))
+      )
+    ) |>
+    select(-dec_time, -doy) |>
+    pivot_wider(names_from = sal, values_from = res)
+}
 
 # get gam predictions
 pred_fun <- function(datin, modin) {
   moddat <- datin
   moddat$fit <- predict(modin, type = 'link', newdata = moddat)
   moddat$btfit <- predict(modin, type = 'response', newdata = moddat)
+  moddat$fithi <- predict(
+    modin,
+    type = 'link',
+    newdata = moddat %>% mutate(tn_load = max(tn_load))
+  )
+  moddat$btfithi <- predict(
+    modin,
+    type = 'response',
+    newdata = moddat %>% mutate(tn_load = max(tn_load))
+  )
+  moddat$fitmd <- predict(
+    modin,
+    type = 'link',
+    newdata = moddat %>% mutate(tn_load = mean(tn_load))
+  )
+  moddat$btfitmd <- predict(
+    modin,
+    type = 'response',
+    newdata = moddat %>% mutate(tn_load = mean(tn_load))
+  )
+  moddat$fitlo <- predict(
+    modin,
+    type = 'link',
+    newdata = moddat %>% mutate(tn_load = min(tn_load))
+  )
+  moddat$btfitlo <- predict(
+    modin,
+    type = 'response',
+    newdata = moddat %>% mutate(tn_load = min(tn_load))
+  )
 
   salgrd <- moddat |>
     pull(sal) |>
     range(na.rm = TRUE)
   salgrd <- seq(salgrd[1], salgrd[2], length.out = 10)
 
-  # make prediction grid
+  # make prediction grids
   toprd <- moddat |>
-    select(date, dec_time, doy) |>
+    select(date, dec_time, doy, tn_load) |>
+    crossing(
+      sal = salgrd
+    )
+
+  toprdlo <- moddat |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = min(tn_load)) |>
+    crossing(
+      sal = salgrd
+    )
+  toprdmd <- moddat |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = mean(tn_load)) |>
+    crossing(
+      sal = salgrd
+    )
+  toprdhi <- moddat |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = max(tn_load)) |>
     crossing(
       sal = salgrd
     )
 
   # get link predictions, wide format
-  fits <- tibble(
-    res = as.numeric(predict(modin, newdata = toprd, type = 'link'))
-  ) |>
-    bind_cols(toprd) |>
-    mutate(
-      year = lubridate::year(date),
-      month = lubridate::month(date),
-      day = lubridate::day(date),
-      sal = factor(
-        sal,
-        levels = salgrd,
-        labels = paste0('X', seq(1:length(salgrd)))
-      )
-    ) |>
-    select(-dec_time, -doy) |>
-    pivot_wider(names_from = sal, values_from = res)
+  fits <- fits_fun(modin, toprd, salgrd, type = 'link')
+  fitshi <- fits_fun(modin, toprdhi, salgrd, type = 'link')
+  fitsmd <- fits_fun(modin, toprdmd, salgrd, type = 'link')
+  fitslo <- fits_fun(modin, toprdlo, salgrd, type = 'link')
 
   # get response predictions, wide format
-  btfits <- tibble(
-    res = as.numeric(predict(modin, newdata = toprd, type = 'response'))
-  ) |>
-    bind_cols(toprd) |>
-    mutate(
-      year = lubridate::year(date),
-      month = lubridate::month(date),
-      day = lubridate::day(date),
-      sal = factor(
-        sal,
-        levels = salgrd,
-        labels = paste0('X', seq(1:length(salgrd)))
-      )
-    ) |>
-    select(-dec_time, -doy) |>
-    pivot_wider(names_from = sal, values_from = res)
+  btfits <- fits_fun(modin, toprd, salgrd, type = 'response')
+  btfitshi <- fits_fun(modin, toprdhi, salgrd, type = 'response')
+  btfitsmd <- fits_fun(modin, toprdmd, salgrd, type = 'response')
+  btfitslo <- fits_fun(modin, toprdlo, salgrd, type = 'response')
 
   # normalized results
-  moddat <- norm_fun(moddat, fits, btfits, salgrd)
+  norm <- norm_fun(moddat, fits, btfits, salgrd)
+  normlo <- norm_fun(moddat, fitslo, btfitslo, salgrd)[, c('norm', 'btnorm')] |>
+    rename(normlo = norm, btnormlo = btnorm)
+  normmd <- norm_fun(moddat, fitsmd, btfitsmd, salgrd)[, c('norm', 'btnorm')] |>
+    rename(normmd = norm, btnormmd = btnorm)
+  normhi <- norm_fun(moddat, fitshi, btfitshi, salgrd)[, c('norm', 'btnorm')] |>
+    rename(normhi = norm, btnormhi = btnorm)
 
-  # predictions at mean salinity
-  mod <- lm(sal ~ dec_time, data = moddat)
-  toprd <- data.frame(
-    dec_time = moddat$dec_time,
-    doy = moddat$doy,
-    sal = predict(mod, newdata = data.frame(dec_time = moddat$dec_time))
-  )
-  moddat$meansalfit <- predict(modin, newdata = toprd, type = 'response')
+  moddat <- bind_cols(norm, normlo, normmd, normhi)
 
   out <- structure(
     .Data = moddat,
     class = c('data.frame', 'tibble'),
     fits = fits,
     btfits = btfits,
+    fitslo = fitslo,
+    btfitslo = btfitslo,
+    fitsmd = fitsmd,
+    btfitsmd = btfitsmd,
+    fitshi = fitshi,
+    btfitshi = btfitshi,
     salgrd = salgrd
   )
 
