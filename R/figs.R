@@ -241,27 +241,36 @@ plos <- mods |>
     salplo = pmap(
       list(mod, data, bay_segment),
       function(mod, data, bay_segment) {
+        bayseg <- bay_segment
         # get salinity ranges
         prdgrd <- wqdat |>
+          select(date, sal, bay_segment) |>
+          filter(bay_segment %in% bayseg) |>
           mutate(
             yr = year(date),
             anngrp = case_when(
-              yr %in% 1975:2004 ~ '1975 - 2004',
+              yr %in% 1975:1990 ~ '1975 - 1990',
               # yr %in% 1986:1995 ~ '1986 - 1995',
-              # yr %in% 1991:2009 ~ '1991 - 2009',
+              yr %in% 1991:2009 ~ '1991 - 2009',
               # yr %in% 2006:2015 ~ '2006 - 2015',
-              yr %in% 2005:2024 ~ '2005 - 2024',
+              yr %in% 2010:2024 ~ '2010- 2024',
               T ~ NA_character_
             ),
             mo = month(date),
-            qrt = quarter(date)
+            qrt = quarter(date),
+            seas = case_when(
+              mo %in% c(1, 2, 3, 4, 5, 10, 11, 12) ~ 'Dry',
+              mo %in% c(6, 7, 8, 9) ~ 'Wet',
+              T ~ NA_character_
+            )
           ) |>
-          filter(mo %in% c(2, 5, 8, 11)) |>
+          # filter(!is.na(seas)) |>
+          # filter(mo %in% c(2, 5, 8, 11)) |>
           filter(!is.na(anngrp)) |>
           summarise(
             salmin = quantile(sal, 0.05, na.rm = T),
             salmax = quantile(sal, 0.95, na.rm = T),
-            .by = c(mo, anngrp)
+            .by = c(seas, anngrp)
           )
 
         # reformat grid predictions in salinity space
@@ -282,17 +291,22 @@ plos <- mods |>
         toplo <- prds |>
           mutate(
             anngrp = case_when(
-              year %in% 1975:2004 ~ '1975 - 2004',
+              year %in% 1975:1990 ~ '1975 - 1990',
               # year %in% 1986:1995 ~ '1986 - 1995',
-              # year %in% 1991:2009 ~ '1991 - 2009',
+              year %in% 1991:2009 ~ '1991 - 2009',
               # year %in% 2006:2015 ~ '2006 - 2015',
-              year %in% 2005:2024 ~ '2005 - 2024',
+              year %in% 2010:2024 ~ '2010- 2024',
               T ~ NA_character_
             ),
             qrt = quarter(date),
-            mo = month(date)
+            mo = month(date),
+            seas = case_when(
+              mo %in% c(1, 2, 3, 4, 5, 10, 11, 12) ~ 'Dry',
+              mo %in% c(6, 7, 8, 9) ~ 'Wet',
+              T ~ NA_character_
+            )
           ) |>
-          inner_join(prdgrd, by = c('anngrp', 'mo')) |>
+          inner_join(prdgrd, by = c('anngrp', 'seas')) |>
           filter(sal >= salmin & sal <= salmax) |>
           mutate(
             res = exp(res),
@@ -306,7 +320,7 @@ plos <- mods |>
             btfit = mean(res, na.rm = T),
             btlwr = t.test(res)$conf.int[1], #quantile(res, 0.05, na.rm = T),
             btupr = t.test(res)$conf.int[2], #quantile(res, 0.95, na.rm = T),
-            .by = c(sal, anngrp, mo)
+            .by = c(sal, anngrp, seas)
           )
 
         p <- ggplot(
@@ -325,7 +339,21 @@ plos <- mods |>
             color = NA
           ) +
           geom_line() +
-          facet_wrap(~mo, ncol = 4, scales = 'free_y') +
+          scale_color_manual(
+            values = c(
+              '1975 - 1990' = 'darkblue',
+              '1991 - 2009' = 'darkgreen',
+              '2010- 2024' = 'darkred'
+            )
+          ) +
+          scale_fill_manual(
+            values = c(
+              '1975 - 1990' = 'darkblue',
+              '1991 - 2009' = 'darkgreen',
+              '2010- 2024' = 'darkred'
+            )
+          ) +
+          facet_grid(~seas) +
           labs(
             x = 'Salinity (ppth)',
             y = 'Chl-a (µg/L)',
