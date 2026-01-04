@@ -2,6 +2,7 @@ library(tidyverse)
 library(here)
 library(patchwork)
 library(mgcv)
+library(ggrepel)
 
 source(here('R/funcs.R'))
 
@@ -49,7 +50,7 @@ p1 <- ggplot(toplo, aes(x = date, y = chla)) +
   guides(
     color = guide_colorbar(
       barheight = unit(0.25, "cm"),
-      barwidth = unit(4, "cm")
+      barwidth = unit(6, "cm")
     )
   ) +
   theme_minimal() +
@@ -84,7 +85,7 @@ p2 <- ggplot(toplo, aes(x = doydum, y = btfit, group = yr, color = yr)) +
   guides(
     color = guide_colorbar(
       barheight = unit(0.25, "cm"),
-      barwidth = unit(4, "cm")
+      barwidth = unit(6, "cm")
     )
   ) +
   theme(
@@ -118,16 +119,16 @@ p <- ggplot(toplo, aes(x = yr, y = btfit)) +
   geom_point(aes(fill = "Predicted"), color = 'black') +
   geom_line(aes(y = btnorm, color = "Normalized", linetype = "Normalized")) +
   geom_line(aes(
-    y = meansalfit,
-    color = "Mean Salinity",
-    linetype = "Mean Salinity"
+    y = btnormmd,
+    color = "Normalized, Mean Load",
+    linetype = "Normalized, Mean Load"
   )) +
   # coord_cartesian(xlim = c(2000, 2024)) +
   scale_linetype_manual(
-    values = c("Normalized" = "solid", "Mean Salinity" = "dashed")
+    values = c("Normalized" = "solid", "Normalized, Mean Load" = "dashed")
   ) +
   scale_color_manual(
-    values = c("Normalized" = "tomato1", "Mean Salinity" = "blue")
+    values = c("Normalized" = "tomato1", "Normalized, Mean Load" = "blue")
   ) +
   scale_fill_manual(values = c("Predicted" = "black")) +
   facet_wrap(~bay_segment, scales = 'free_y') +
@@ -148,18 +149,65 @@ png(here('figs/prdnrm.png'), width = 7, height = 5, units = 'in', res = 300)
 print(p)
 dev.off()
 
+
+# salinity vs load effects ------------------------------------------------
+
+toplo <- mods |>
+  select(bay_segment, annsum) |>
+  unnest(annsum) |>
+  # filter(bay_segment == 'OTB') |>
+  select(bay_segment, yr, btfit, btnorm, btnormmd) |>
+  mutate(
+    saleff = btfit - btnorm,
+    ldeff = btnorm - btnormmd
+  )
+
+# create path by year
+p <- ggplot(toplo, aes(x = saleff, y = ldeff)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_path(aes(group = 1), color = 'gray80', size = 1) +
+  geom_point(aes(color = yr), size = 2) +
+  # geom_label(aes(lKabel = yr, fill = yr), size = 2, color = 'white') +
+  geom_text_repel(
+    aes(label = yr, color = yr),
+    size = 2,
+    max.overlaps = 20
+  ) +
+  scale_color_viridis_c(option = "D", end = 0.8) +
+  scale_fill_viridis_c(option = "D", end = 0.8) +
+  # coord_equal() +
+  scale_y_continuous(expand = c(0.1, 0.1)) +
+  scale_x_continuous(expand = c(0.1, 0.1)) +
+  facet_wrap(~bay_segment, scales = 'free') +
+  labs(
+    color = "Year",
+    fill = "Year",
+    x = 'Salinity Effect µg/L (+ is lower salinity)',
+    y = 'Load Effect µg/L (+ is higher load)',
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank()
+  )
+
+png(here('figs/salvload.png'), width = 8, height = 7, units = 'in', res = 300)
+print(p)
+dev.off()
+
+
 # grid plot --------------------------------------------------------------
 
 prdplo <- mods |>
   select(bay_segment, prds) |>
   mutate(prds = purrr::map(prds, as_tibble)) |>
   unnest(prds) |>
-  select(bay_segment, date, sal, res = btfit) |>
+  select(bay_segment, date, sal, res = btfitmd) |>
   mutate(
     month = lubridate::month(date, label = T, abbr = F),
     yr = lubridate::year(date)
   ) |>
-  filter(yr >= 2004 & yr <= 2024 & month %in% month.name[6:11])
+  filter(month %in% month.name[6:11] & yr >= 2004)
 
 grds <- mods |>
   mutate(
@@ -169,11 +217,12 @@ grds <- mods |>
       ~ grid_plo(
         .y,
         month = c(6:11),
+        col_lim = c(1, 40),
         years = c(2004, 2024),
-        col_lim = c(1, 30),
         allsal = F,
         ncol = 6,
-        sal_fac = 6
+        sal_fac = 6,
+        ldmod = 'btfitsmd'
       ) +
         labs(title = .x) +
         geom_line(
@@ -207,7 +256,7 @@ dev.off()
 
 # salinity response by year ----------------------------------------------
 
-dec_time <- c(1980, 2020)
+dec_time <- c(2000, 2020)
 doy <- yday(as.Date(c('1975-02-15', '1975-05-15', '1975-08-15', '1975-11-15')))
 
 plos <- mods |>
