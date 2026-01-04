@@ -484,9 +484,9 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
 
   # prep interp grids by adding month, year columns
   dts <- fits$date
-  fits <- select(fits, -year, -month, -day, -date)
+  fits <- select(fits, -year, -month, -day, -date, -tn_load)
   btfits <- btfits |>
-    select(-year, -date, -month, -day)
+    select(-year, -date, -month, -day, -tn_load)
 
   # sal values occuring by month, used for interpolation
   sal_mon <- data.frame(dat_in) |>
