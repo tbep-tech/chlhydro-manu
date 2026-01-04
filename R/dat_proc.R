@@ -110,6 +110,8 @@ wqdat |>
 
 # OTB model --------------------------------------------------------------
 
+load(file = here('data/wqdat.RData'))
+
 tomod <- wqdat |>
   filter(bay_segment == 'OTB') |>
   filter(!is.na(tn_load))
@@ -131,38 +133,6 @@ mod <- gam(
   method = 'REML'
 )
 
-toprd1 <- crossing(
-  tn_load = c(max(tomod$tn_load, na.rm = T), min(tomod$tn_load, na.rm = T)),
-  sal = c(max(tomod$sal, na.rm = T), min(tomod$sal, na.rm = T)),
-  tomod |> select(-tn_load, -sal)
-)
-
-prd1 <- toprd1 |>
-  mutate(
-    prd = predict(mod, newdata = toprd1, type = 'response')
-  ) |>
-  mutate(
-    loadcond = case_when(
-      tn_load == max(tomod$tn_load, na.rm = T) ~ 'highload',
-      tn_load == min(tomod$tn_load, na.rm = T) ~ 'loload'
-    ),
-    salcond = case_when(
-      sal == max(tomod$sal, na.rm = T) ~ 'highsal',
-      sal == min(tomod$sal, na.rm = T) ~ 'losal'
-    ),
-    yr = year(date)
-  ) |>
-  summarise(
-    prd = mean(prd, na.rm = T),
-    .by = c(yr, loadcond, salcond)
-  )
-
-ggplot(prd1, aes(x = yr, y = prd, color = loadcond)) +
-  geom_line() +
-  facet_wrap(~salcond) +
-  theme_minimal()
-
-
 summary(mod)$dev.expl
 gam.check(mod)
 acf(residuals(mod, type = "deviance")) # check for autocorrelation in residds
@@ -174,16 +144,15 @@ ggplot(prds, aes(x = dec_time, y = chla)) +
   geom_line(aes(y = btfithi), color = 'blue')
 
 
-grid_plo(prds, month = 'all', allsal = T)
-grid_plo(prds, month = 'all', allsal = T, years = c(2000, 2024))
+grid_plo(prds, month = 'all', allsal = T, ldmod = 'btfitsmd')
 grid_plo(prds)
 grid_plo(
   prds,
   month = c(5:10),
-  years = c(2000, 2024),
   allsal = F,
   ncol = 6,
-  sal_fac = 6
+  sal_fac = 6,
+  ldmod = 'btfitsmd'
 )
 
 toplo <- data.frame(prds) |>
@@ -228,21 +197,15 @@ toplo <- data.frame(prds) |>
 ggplot(toplo, aes(x = yr, y = fit)) +
   geom_point() +
   geom_line(aes(y = norm)) +
-  facet_wrap(~est, scales = 'free') +
-  theme_minimal()
-
-toplo <- data.frame(prds)
-
-ggplot(toplo, aes(x = yr, y = fit, group = est, color = est)) +
-  geom_point() +
-  geom_line(aes(y = norm)) +
-  facet_wrap(~nrmval, scales = 'free') +
+  facet_wrap(~est) +
   theme_minimal()
 
 # all bay segments -------------------------------------------------------
 
+load(file = here('data/wqdat.RData'))
+
 mods <- wqdat |>
-  # filter(dec_time >= 2000) |>
+  filter(dec_time >= 1995) |>
   group_nest(bay_segment) |>
   mutate(
     mod = map(
@@ -251,9 +214,13 @@ mods <- wqdat |>
         chla ~ s(dec_time, k = 40, bs = 'tp') +
           s(doy, k = 10, bs = 'cc') +
           s(sal, k = 10) +
+          s(tn_load, k = 10) +
           ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
           ti(dec_time, sal, k = c(5, 5)) +
-          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')),
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
         data = .x,
         knots = list(doy = c(0, 366)),
         family = Gamma(link = 'log'),
@@ -271,7 +238,12 @@ mods <- wqdat |>
           chla = mean(chla, na.rm = T),
           btfit = mean(btfit, na.rm = T),
           btnorm = mean(btnorm, na.rm = T),
-          meansalfit = mean(meansalfit, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          btfithi = mean(btfithi, na.rm = T),
+          btnormhi = mean(btnormhi, na.rm = T),
+          btfitlo = mean(btfitlo, na.rm = T),
+          btnormlo = mean(btnormlo, na.rm = T),
           .by = c(yr)
         )
     )

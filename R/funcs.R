@@ -197,13 +197,13 @@ grid_plo <- function(
   years = NULL,
   col_vec = NULL,
   col_lim = NULL,
-  salscl = TRUE,
   allsal = FALSE,
   sal_fac = 3,
   yr_fac = 3,
   ncol = NULL,
   grids = FALSE,
   pretty = TRUE,
+  ldmod = 'btfits',
   ...
 ) {
   # convert month vector to those present in data
@@ -213,8 +213,13 @@ grid_plo <- function(
     month <- c(1:12)
   }
 
+  ldmod <- match.arg(
+    ldmod,
+    choices = c('btfits', 'btfitsmd', 'btfitshi', 'btfitslo')
+  )
+
   # format predictions as wide
-  to_plo <- attr(prds, 'btfits')
+  to_plo <- attr(prds, ldmod)
 
   # model data with date column
   moddat <- data.frame(prds) |>
@@ -255,34 +260,13 @@ grid_plo <- function(
   # reshape data frame
   to_plo <- to_plo[to_plo$month %in% month, , drop = FALSE]
   names(to_plo)[grep('^X', names(to_plo))] <- paste('sal', salgrd)
-  to_plo <- tidyr::gather(to_plo, 'sal', 'res', 5:ncol(to_plo)) |>
+  to_plo <- tidyr::gather(to_plo, 'sal', 'res', 6:ncol(to_plo)) |>
     mutate(sal = as.numeric(gsub('^sal ', '', sal))) |>
     select(-date, -day) |>
     summarize(
       res = mean(res, na.rm = TRUE),
       .by = c(year, month, sal)
     )
-
-  # change sal to original scale
-  if (!salscl) {
-    # grid data
-    salobs_rng <- range(moddat$sal, na.rm = TRUE)
-    salscl_rng <- range(to_plo$sal, na.rm = TRUE)
-    to_plo$sal <- (to_plo$sal - salscl_rng[1]) /
-      diff(salscl_rng) *
-      diff(salobs_rng) +
-      salobs_rng[1]
-
-    #input data
-    salscl_rng <- range(prddat$sal, na.rm = TRUE)
-    prddat$sal <- (prddat$sal - salscl_rng[1]) /
-      diff(salscl_rng) *
-      diff(salobs_rng) +
-      salobs_rng[1]
-
-    # salgrd to raw scale
-    salgrd <- seq(salobs_rng[1], salobs_rng[2], length = length(salgrd))
-  }
 
   ## use linear interpolation to make a smoother plot
   if (!allmo) {
