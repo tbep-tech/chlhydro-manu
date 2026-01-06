@@ -547,3 +547,158 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
   # exit function
   return(dat_in)
 }
+
+# get load scalars for forecasting
+# loads are scaled by ldfac based on average monthly proportion from historical record
+# then summed by lags
+ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), bay_segment) {
+  lds <- tibble(
+    bay_segment = c('OTB', 'HB', 'MTB', 'LTB'),
+    thresh = c(486, 1451, 799, 349)
+  )
+
+  perc <- lddat |>
+    filter(bay_segment %in% !!bay_segment) |>
+    select(-bay_segment) |>
+    filter(yr > 2010) |>
+    summarise(
+      tn_load = sum(tn_load),
+      .by = c(yr, mo, date)
+    ) |>
+    summarise(
+      tn_load = mean(tn_load),
+      .by = c(mo)
+    ) |>
+    mutate(
+      perc = tn_load / sum(tn_load),
+      thresh = lds$thresh[lds$bay_segment == !!bay_segment]
+    )
+
+  lastten <- perc |>
+    crossing(
+      yrs = c(1:4)
+    ) |>
+    arrange(yrs, mo) |>
+    mutate(
+      lag1 = lag(tn_load, n = 1),
+      lag2 = lag(tn_load, n = 2),
+      lag3 = lag(tn_load, n = 3)
+    ) |>
+    filter(yrs == 4) |>
+    mutate(
+      tn_loadlag = tn_load + lag1 + lag2 + lag3
+    ) |>
+    dplyr::select(-yrs, -perc, -lag1, -lag2, -lag3) |>
+    mutate(
+      ldfac = 'Last 10 Years'
+    )
+
+  out <- perc |>
+    dplyr::select(-tn_load) |>
+    crossing(
+      ldfac = ldfac
+    ) |>
+    mutate(
+      threshfac = thresh * ldfac,
+      tn_load = perc * threshfac
+    ) |>
+    crossing(
+      yrs = c(1:4)
+    ) |>
+    arrange(ldfac, yrs, mo) |>
+    mutate(
+      lag1 = lag(tn_load, n = 1),
+      lag2 = lag(tn_load, n = 2),
+      lag3 = lag(tn_load, n = 3),
+      .by = c(ldfac)
+    ) |>
+    filter(yrs == 4) |>
+    mutate(
+      tn_loadlag = tn_load + lag1 + lag2 + lag3
+    ) |>
+    dplyr::select(-yrs, -perc, -lag1, -lag2, -lag3) |>
+    mutate(
+      ldfac = paste0(
+        'TMDL Load Factor: ',
+        ldfac
+      )
+    ) |>
+    bind_rows(lastten) |>
+    mutate(
+      ldfac = factor(
+        ldfac,
+        levels = sort(unique(ldfac))
+      )
+    )
+
+  return(out)
+}
+
+# get salinity model forecast data
+salfore_fun <- function(mod, nsim = 1000, yrs = c(2025, 2050)) {
+  # future data
+  toprd <- expand.grid(
+    yr = seq(yrs[1], yrs[2], by = 1),
+    mo = factor(1:12)
+  ) |>
+    arrange(yr, mo)
+
+  # Design matrix for predictions
+  X <- model.matrix(~ yr + factor(mo), data = toprd)
+
+  # model coef, varcovar matrix, and residual standard error
+  coefs <- coef(mod)
+  vcov_matrix <- vcov(mod)
+  sigma <- summary(mod)$sigma
+
+  # similar model coefficients
+  coef_sims <- MASS::mvrnorm(nsim, mu = coefs, Sigma = vcov_matrix)
+
+  # Generate predictions for each simulation
+  sims <- vector("list", nsim)
+
+  for (i in 1:nsim) {
+    # get predictions using simulated coefficients
+    y_mean <- X %*% coef_sims[i, ]
+
+    # add residual uncertainty
+    y_sim <- y_mean + rnorm(nrow(toprd), mean = 0, sd = sigma)
+
+    sims[[i]] <- data.frame(
+      yr = toprd$yr,
+      mo = toprd$mo,
+      sim = i,
+      sal = as.vector(y_sim)
+    )
+  }
+
+  # combined
+  out <- do.call(rbind, sims) |>
+    tibble() |>
+    mutate(
+      date = make_date(yr, as.integer(as.character(mo)), 1),
+      yr = year(date),
+      mo = month(date)
+    )
+
+  return(out)
+}
+
+# get GAM forecast from simulated salinity w/ load scalars
+gamfore_fun <- function(salfore, ldscale, gmmod) {
+  salwlds <- salfore |>
+    left_join(ldscale, by = c('mo'), relationship = 'many-to-many') |>
+    mutate(
+      dec_time = decimal_date(date),
+      doy = yday(date)
+    )
+
+  gmpreds <- predict(gmmod, newdata = salwlds, type = 'response')
+
+  out <- salwlds |>
+    mutate(
+      chla = gmpreds
+    )
+
+  return(out)
+}

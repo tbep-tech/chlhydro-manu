@@ -216,7 +216,7 @@ grds <- mods |>
       ~ grid_plo(
         .y,
         month = c(6:11),
-        col_lim = c(1, 40),
+        col_lim = c(1, 32),
         years = c(2004, 2024),
         allsal = F,
         ncol = 6,
