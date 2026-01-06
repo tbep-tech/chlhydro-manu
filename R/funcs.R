@@ -90,32 +90,32 @@ pred_fun <- function(datin, modin) {
   moddat$fithi <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_load = max(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = max(tn_loadlag))
   )
   moddat$btfithi <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_load = max(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = max(tn_loadlag))
   )
   moddat$fitmd <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_load = mean(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = mean(tn_loadlag))
   )
   moddat$btfitmd <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_load = mean(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = mean(tn_loadlag))
   )
   moddat$fitlo <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_load = min(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = min(tn_loadlag))
   )
   moddat$btfitlo <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_load = min(tn_load))
+    newdata = moddat %>% mutate(tn_loadlag = min(tn_loadlag))
   )
 
   salgrd <- moddat |>
@@ -125,26 +125,26 @@ pred_fun <- function(datin, modin) {
 
   # make prediction grids
   toprd <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
+    select(date, dec_time, doy, tn_loadlag) |>
     crossing(
       sal = salgrd
     )
 
   toprdlo <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
-    mutate(tn_load = min(tn_load)) |>
+    select(date, dec_time, doy, tn_loadlag) |>
+    mutate(tn_loadlag = min(tn_loadlag)) |>
     crossing(
       sal = salgrd
     )
   toprdmd <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
-    mutate(tn_load = mean(tn_load)) |>
+    select(date, dec_time, doy, tn_loadlag) |>
+    mutate(tn_loadlag = mean(tn_loadlag)) |>
     crossing(
       sal = salgrd
     )
   toprdhi <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
-    mutate(tn_load = max(tn_load)) |>
+    select(date, dec_time, doy, tn_loadlag) |>
+    mutate(tn_loadlag = max(tn_loadlag)) |>
     crossing(
       sal = salgrd
     )
@@ -468,9 +468,9 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
 
   # prep interp grids by adding month, year columns
   dts <- fits$date
-  fits <- select(fits, -year, -month, -day, -date, -tn_load)
+  fits <- select(fits, -year, -month, -day, -date, -tn_loadlag)
   btfits <- btfits |>
-    select(-year, -date, -month, -day, -tn_load)
+    select(-year, -date, -month, -day, -tn_loadlag)
 
   # sal values occuring by month, used for interpolation
   sal_mon <- data.frame(dat_in) |>

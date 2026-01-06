@@ -46,8 +46,7 @@ wqdat <- epcdata |>
   )
 
 # loading data
-
-mosdat <- rdataload(
+lddat <- rdataload(
   'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mosdat.RData'
 ) |>
   filter(
@@ -72,6 +71,16 @@ mosdat <- rdataload(
   ) |>
   summarise(
     tn_load = sum(tn_load),
+    .by = c(bay_segment, yr, mo, date, source)
+  )
+
+save(lddat, file = here('data/lddat.RData'))
+
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
     .by = c(bay_segment, date)
   ) |>
   mutate(
@@ -88,12 +97,12 @@ mosdat <- rdataload(
     .direction = 'up'
   ) |>
   mutate(
-    tn_load = tn_load + lag1 + lag2 + lag3
+    tn_loadlag = tn_load + lag1 + lag2 + lag3
   ) |>
   select(-lag1, -lag2, -lag3)
 
 wqdat <- wqdat |>
-  left_join(mosdat, by = c('bay_segment', 'date'))
+  left_join(lddatlag, by = c('bay_segment', 'date'))
 
 save(wqdat, file = here('data/wqdat.RData'))
 
@@ -114,19 +123,20 @@ load(file = here('data/wqdat.RData'))
 
 tomod <- wqdat |>
   filter(bay_segment == 'OTB') |>
-  filter(!is.na(tn_load))
+  select(-tn_load)
+filter(!is.na(tn_loadlag))
 
 mod <- gam(
   chla ~ s(dec_time, k = 40, bs = 'tp') +
     s(doy, k = 10, bs = 'cc') +
     s(sal, k = 10) +
-    s(tn_load, k = 10) +
+    s(tn_loadlag, k = 10) +
     ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
     ti(dec_time, sal, k = c(5, 5)) +
     ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-    ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
-    ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-    ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+    ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('tp', 'tp')) +
+    ti(tn_loadlag, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(tn_loadlag, sal, k = c(5, 5), bs = c('tp', 'tp')),
   data = tomod,
   family = Gamma(link = 'log'),
   knots = list(doy = c(0, 366)),
@@ -214,13 +224,13 @@ mods <- wqdat |>
         chla ~ s(dec_time, k = 40, bs = 'tp') +
           s(doy, k = 10, bs = 'cc') +
           s(sal, k = 10) +
-          s(tn_load, k = 10) +
+          s(tn_loadlag, k = 10) +
           ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
           ti(dec_time, sal, k = c(5, 5)) +
           ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
-          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+          ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_loadlag, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_loadlag, sal, k = c(5, 5), bs = c('tp', 'tp')),
         data = .x,
         knots = list(doy = c(0, 366)),
         family = Gamma(link = 'log'),
