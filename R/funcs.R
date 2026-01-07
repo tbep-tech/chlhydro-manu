@@ -560,7 +560,7 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), bay_segment) {
   perc <- lddat |>
     filter(bay_segment %in% !!bay_segment) |>
     select(-bay_segment) |>
-    filter(yr > 2010) |>
+    filter(yr >= 2010) |>
     summarise(
       tn_load = sum(tn_load),
       .by = c(yr, mo, date)
@@ -629,75 +629,6 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), bay_segment) {
         ldfac,
         levels = sort(unique(ldfac))
       )
-    )
-
-  return(out)
-}
-
-# get salinity model forecast data
-salfore_fun <- function(mod, nsim = 1000, yrs = c(2025, 2050)) {
-  # future data
-  toprd <- expand.grid(
-    yr = seq(yrs[1], yrs[2], by = 1),
-    mo = factor(1:12)
-  ) |>
-    arrange(yr, mo)
-
-  # Design matrix for predictions
-  X <- model.matrix(~ yr + factor(mo), data = toprd)
-
-  # model coef, varcovar matrix, and residual standard error
-  coefs <- coef(mod)
-  vcov_matrix <- vcov(mod)
-  sigma <- summary(mod)$sigma
-
-  # similar model coefficients
-  coef_sims <- MASS::mvrnorm(nsim, mu = coefs, Sigma = vcov_matrix)
-
-  # Generate predictions for each simulation
-  sims <- vector("list", nsim)
-
-  for (i in 1:nsim) {
-    # get predictions using simulated coefficients
-    y_mean <- X %*% coef_sims[i, ]
-
-    # add residual uncertainty
-    y_sim <- y_mean + rnorm(nrow(toprd), mean = 0, sd = sigma)
-
-    sims[[i]] <- data.frame(
-      yr = toprd$yr,
-      mo = toprd$mo,
-      sim = i,
-      sal = as.vector(y_sim)
-    )
-  }
-
-  # combined
-  out <- do.call(rbind, sims) |>
-    tibble() |>
-    mutate(
-      date = make_date(yr, as.integer(as.character(mo)), 1),
-      yr = year(date),
-      mo = month(date)
-    )
-
-  return(out)
-}
-
-# get GAM forecast from simulated salinity w/ load scalars
-gamfore_fun <- function(salfore, ldscale, gmmod) {
-  salwlds <- salfore |>
-    left_join(ldscale, by = c('mo'), relationship = 'many-to-many') |>
-    mutate(
-      dec_time = decimal_date(date),
-      doy = yday(date)
-    )
-
-  gmpreds <- predict(gmmod, newdata = salwlds, type = 'response')
-
-  out <- salwlds |>
-    mutate(
-      chla = gmpreds
     )
 
   return(out)

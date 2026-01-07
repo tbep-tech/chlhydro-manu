@@ -69,6 +69,9 @@ load(file = here('tabs/hydnrmtab.RData'))
 
 1. Model summary statistics (include by month?)
 
+## Inroduction 
+
+[@testa2025]
 
 ## Methods
 
@@ -101,6 +104,10 @@ $$
 \text{Norm}(t) &= \frac{1}{|\mathcal{S}|} \sum_{s \in \mathcal{S}} \hat{f}\left(t, s, \bar{\text{sal}}_{m(t),y(t)}\right)
 \end{align}
 $$
+
+### Scenario assessment
+
+Make a note about forecasting with GAMs, they are tricky because the polynomial surfaces behave poorly outside of the range of the observed data.  
 
 ## Results
 

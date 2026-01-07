@@ -53,111 +53,144 @@ trgs <- tbeptools::targets |>
   ) |>
   tibble()
 
-
-salmods <- wqdat |>
+salyrrates <- wqdat |>
   dplyr::select(date, sal, bay_segment) |>
   mutate(
-    yr = year(date),
-    mo = month(date)
+    yr = year(date)
   ) |>
   summarise(
     sal = mean(sal, na.rm = T),
-    .by = c(yr, mo, date, bay_segment)
+    .by = c(yr, bay_segment)
   ) |>
   group_nest(bay_segment) |>
   mutate(
     salmod = map(
       data,
-      ~ lm(sal ~ yr + factor(mo), data = .x, na.action = 'na.exclude')
+      ~ lm(sal ~ yr, data = .x, na.action = 'na.exclude')
+    ),
+    slopeyr = map_dbl(salmod, ~ coef(.x)[2]),
+    meanporsal = map_dbl(
+      data,
+      ~ mean(.x |> filter(yr >= 1995) |> pull(sal), na.rm = T)
+    ),
+    lastyr = map(
+      salmod,
+      ~ {
+        lastyr <- max(.x$model$yr)
+        lastsal <- predict(.x, newdata = data.frame(yr = lastyr))
+        data.frame(yr = lastyr, sal = lastsal)
+      }
     )
+  ) |>
+  select(-salmod, -data) |>
+  unnest(c('meanporsal', 'lastyr', 'slopeyr')) |>
+  crossing(
+    yrs = c(1:50)
+  ) |>
+  mutate(
+    futureyr = 2024 + yrs,
+    salforeyr = sal + (slopeyr * yrs),
+    .by = bay_segment
   )
 
-prds <- salmods |>
-  select(-data) |>
-  left_join(mods, by = 'bay_segment') |>
-  select(-data, -prds, -annsum) |>
-  rename(
-    gmmod = mod
+# get salinity monthly differences
+modiffs <- wqdat |>
+  dplyr::select(date, sal, bay_segment) |>
+  mutate(
+    yr = year(date),
+    mo = month(date)
   ) |>
+  filter(yr >= 1995) |>
+  summarise(
+    sal = mean(sal, na.rm = T),
+    .by = c(mo, bay_segment)
+  ) |>
+  mutate(
+    modiff = sal - mean(sal, na.rm = T),
+    .by = bay_segment
+  ) |>
+  select(-sal)
+
+# add to forecasts
+salrates <- salyrrates |>
+  left_join(modiffs, by = c('bay_segment'), relationship = 'many-to-many') |>
+  mutate(
+    salforeyrmo = salforeyr + modiff,
+    .by = bay_segment
+  ) |>
+  mutate(
+    date = make_date(year = futureyr, month = mo, day = 1),
+    doy = yday(date),
+    dec_time = decimal_date(date)
+  )
+
+ggplot(salrates, aes(x = date, y = salforeyr, color = bay_segment)) +
+  geom_line() +
+  geom_line(aes(y = salforeyrmo)) +
+  facet_wrap(~bay_segment) +
+  # geom_line(aes(y = chk), linetype = 'dashed') +
+  theme_bw()
+
+timevec <- crossing(
+  yr = c(2010:2024),
+  mo = 1:12
+) |>
+  mutate(
+    date = make_date(year = yr, month = mo, day = 1),
+    doy = yday(date),
+    dec_time = decimal_date(date)
+  )
+
+ldscale <- tibble(
+  bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
+) |>
   mutate(
     ldscale = map(
       bay_segment,
       ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), bay_segment = .x)
-    ),
-    salfore = map(salmod, ~ salfore_fun(.x, nsim = 100, yrs = c(2025, 2050))),
-    gamfore = pmap(list(salfore, ldscale, gmmod), ~ gamfore_fun(..1, ..2, ..3))
-  )
-
-toplo <- prds |>
-  select(bay_segment, salfore) |>
-  unnest('salfore') |>
-  summarise(
-    sal = mean(sal),
-    .by = c(bay_segment, yr, sim)
-  )
-
-ggplot(toplo, aes(x = yr, y = sal, group = sim)) +
-  geom_point(alpha = 0.3) +
-  stat_smooth(
-    geom = 'line',
-    method = 'lm',
-    color = 'blue',
-    alpha = 0.3,
-    formula = y ~ x
-  ) +
-  facet_wrap(~bay_segment, ncol = 2) +
-  theme_bw()
-
-toplo <- prds |>
-  unnest('gamfore') |>
-  summarise(
-    chla = mean(chla),
-    .by = c(bay_segment, yr, sim, ldfac)
-  )
-
-ggplot(toplo, aes(x = yr, y = chla, group = sim)) +
-  geom_line(alpha = 0.3) +
-  facet_grid(bay_segment ~ ldfac, scales = 'free_y') +
-  theme_bw()
+    )
+  ) |>
+  unnest('ldscale')
 
 
-toplo2 <- toplo |>
-  left_join(trgs, by = 'bay_segment') |>
-  summarise(
-    percexceeds = mean(chla > thresh) * 100,
-    sdexceeds = sd(chla > thresh) * 100,
-    .by = c(bay_segment, ldfac, yr)
-  )
+modin <- mods$mod[[4]]
 
-ggplot(toplo2, aes(x = yr, y = percexceeds, color = factor(ldfac))) +
+newdat <- salrates |>
+  select(bay_segment, date, yrs, sal = salforeyrmo, doy, dec_time) |>
+  group_nest(yrs, bay_segment) |>
+  mutate(
+    data = map(
+      data,
+      ~ {
+        left_join(
+          .x |> mutate(mo = month(date)) |> select(mo, sal),
+          timevec,
+          by = c('mo')
+        )
+      }
+    )
+  ) |>
+  unnest('data') |>
+  arrange(bay_segment, yrs, date) |>
+  left_join(ldscale, by = c('bay_segment', 'mo'), relationship = 'many-to-many')
+
+toplo <- newdat |>
+  filter(bay_segment == 'OTB') |>
+  filter(yrs %in% c(1, 25, 50))
+ggplot(toplo, aes(x = date, y = sal, color = yrs)) +
   geom_line() +
-  geom_ribbon(
-    aes(
-      ymin = percexceeds - sdexceeds,
-      ymax = percexceeds + sdexceeds,
-      fill = factor(ldfac)
-    ),
-    alpha = 0.2
-  ) +
-  facet_grid(bay_segment ~ ldfac) +
+  facet_wrap(ldfac ~ yrs, ncol = 3) +
   theme_bw()
-
-tmp <- prds |>
-  filter(bay_segment == 'LTB') |>
-  select(bay_segment, gamfore) |>
-  unnest('gamfore') |>
-  filter(ldfac == 'TMDL Load Factor: 1')
-
-toplo <- tmp |>
-  filter(sim == 1) |>
-  filter(yr <= 2030)
-
-ggplot(toplo, aes(x = date, y = chla)) +
+ggplot(toplo, aes(x = date, y = tn_loadlag)) +
   geom_line() +
+  facet_grid(ldfac ~ yrs) +
   theme_bw()
 
-tmp2 <- simulate(mods$mod[[4]], nsim = 100) |>
-  bind_cols(mods$data[[4]]) |>
+tst <- newdat |>
+  filter(bay_segment == 'OTB')
+
+p <- simulate(mods$mod[[1]], data = tst, nsim = 200) |>
+  bind_cols(tst) |>
   pivot_longer(
     cols = starts_with('sim'),
     names_to = 'sim',
@@ -168,22 +201,35 @@ tmp2 <- simulate(mods$mod[[4]], nsim = 100) |>
   ) |>
   arrange(sim, date)
 
-ggplot(tmp2, aes(x = date, y = chla_sim, group = sim)) +
-  geom_line(alpha = 0.3) +
-  geom_point(aes(y = chla), color = 'red') +
-  theme_bw()
-
-tmp3 <- tmp2 |>
-  mutate(
-    yr = year(date)
+pyr <- p |>
+  summarise(
+    chla_sim = mean(chla_sim, na.rm = T),
+    .by = c(yrs, yr, ldfac, sim)
   ) |>
   summarise(
-    chla_mean = mean(chla_sim, na.rm = T),
-    chla = mean(chla, na.rm = T),
-    .by = c(yr, sim)
+    chla_sim = mean(chla_sim, na.rm = T),
+    .by = c(yrs, ldfac, sim)
   )
 
-ggplot(tmp3, aes(x = yr, y = chla_mean, group = sim)) +
-  geom_line(alpha = 0.3) +
-  geom_point(aes(y = chla), color = 'red') +
+ggplot(pyr, aes(x = yrs, y = chla_sim, group = yrs)) +
+  geom_boxplot() +
+  facet_wrap(~ldfac) +
+  theme_bw()
+
+pyr2 <- pyr |>
+  summarise(
+    percexceeds = mean(chla_sim > 9.8) * 100,
+    sdexceeds = sd(chla_sim > 9.8) * 100,
+    .by = c(yrs, ldfac)
+  )
+ggplot(pyr2, aes(x = yrs, y = percexceeds, color = factor(ldfac))) +
+  geom_line() +
+  geom_ribbon(
+    aes(
+      ymin = percexceeds - sdexceeds,
+      ymax = percexceeds + sdexceeds,
+      fill = factor(ldfac)
+    ),
+    alpha = 0.2
+  ) +
   theme_bw()
