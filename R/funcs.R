@@ -560,7 +560,7 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), bay_segment) {
   perc <- lddat |>
     filter(bay_segment %in% !!bay_segment) |>
     select(-bay_segment) |>
-    filter(yr >= 2010) |>
+    filter(yr %in% c(1995:2024)) |>
     summarise(
       tn_load = sum(tn_load),
       .by = c(yr, mo, date)

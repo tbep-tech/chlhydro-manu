@@ -1,5 +1,6 @@
 library(tidyverse)
 library(mgcv)
+library(gratia)
 
 load(file = 'data/mods.RData')
 load(file = 'data/wqdat.RData')
@@ -45,6 +46,8 @@ ggplot(prdgrd, aes(x = yr, y = sal, group = anngrp)) +
 
 # then plot likelihood of exceeding thresholds by time for each scenario
 
+yrs <- 2017:2021
+
 trgs <- tbeptools::targets |>
   filter(bay_segment %in% mods$bay_segment) |>
   dplyr::select(bay_segment, thresh = chla_thresh) |>
@@ -68,78 +71,53 @@ salyrrates <- wqdat |>
       data,
       ~ lm(sal ~ yr, data = .x, na.action = 'na.exclude')
     ),
-    slopeyr = map_dbl(salmod, ~ coef(.x)[2]),
-    meanporsal = map_dbl(
-      data,
-      ~ mean(.x |> filter(yr >= 1995) |> pull(sal), na.rm = T)
-    ),
-    lastyr = map(
-      salmod,
-      ~ {
-        lastyr <- max(.x$model$yr)
-        lastsal <- predict(.x, newdata = data.frame(yr = lastyr))
-        data.frame(yr = lastyr, sal = lastsal)
-      }
-    )
+    slopeyr = map_dbl(salmod, ~ coef(.x)[2])
   ) |>
   select(-salmod, -data) |>
-  unnest(c('meanporsal', 'lastyr', 'slopeyr')) |>
+  unnest(c('slopeyr')) |>
   crossing(
     yrs = c(1:50)
   ) |>
   mutate(
     futureyr = 2024 + yrs,
-    salforeyr = sal + (slopeyr * yrs),
+    salforeyr = slopeyr * yrs,
     .by = bay_segment
   )
 
-# get salinity monthly differences
-modiffs <- wqdat |>
+# get salinity avgs by yr, mo for test period
+saltstyrmo <- wqdat |>
   dplyr::select(date, sal, bay_segment) |>
   mutate(
     yr = year(date),
     mo = month(date)
   ) |>
-  filter(yr >= 1995) |>
+  filter(yr %in% yrs) |>
   summarise(
     sal = mean(sal, na.rm = T),
-    .by = c(mo, bay_segment)
-  ) |>
-  mutate(
-    modiff = sal - mean(sal, na.rm = T),
-    .by = bay_segment
-  ) |>
-  select(-sal)
+    .by = c(yr, mo, bay_segment)
+  )
 
 # add to forecasts
 salrates <- salyrrates |>
-  left_join(modiffs, by = c('bay_segment'), relationship = 'many-to-many') |>
+  left_join(saltstyrmo, by = c('bay_segment'), relationship = 'many-to-many') |>
   mutate(
-    salforeyrmo = salforeyr + modiff,
+    salforeyrmo = sal + salforeyr,
     .by = bay_segment
   ) |>
   mutate(
-    date = make_date(year = futureyr, month = mo, day = 1),
-    doy = yday(date),
-    dec_time = decimal_date(date)
-  )
-
-ggplot(salrates, aes(x = date, y = salforeyr, color = bay_segment)) +
-  geom_line() +
-  geom_line(aes(y = salforeyrmo)) +
-  facet_wrap(~bay_segment) +
-  # geom_line(aes(y = chk), linetype = 'dashed') +
-  theme_bw()
-
-timevec <- crossing(
-  yr = c(2010:2024),
-  mo = 1:12
-) |>
-  mutate(
+    future_mo = mo,
     date = make_date(year = yr, month = mo, day = 1),
     doy = yday(date),
     dec_time = decimal_date(date)
   )
+
+toplo <- salrates |>
+  filter(yrs %in% c(1, 25, 50))
+ggplot(toplo, aes(x = date, y = salforeyrmo, color = bay_segment, group = yr)) +
+  geom_line() +
+  facet_grid(bay_segment ~ yrs, scales = 'free_x') +
+  # geom_line(aes(y = chk), linetype = 'dashed') +
+  theme_bw()
 
 ldscale <- tibble(
   bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
@@ -152,27 +130,15 @@ ldscale <- tibble(
   ) |>
   unnest('ldscale')
 
-
-modin <- mods$mod[[4]]
-
 newdat <- salrates |>
-  select(bay_segment, date, yrs, sal = salforeyrmo, doy, dec_time) |>
-  group_nest(yrs, bay_segment) |>
-  mutate(
-    data = map(
-      data,
-      ~ {
-        left_join(
-          .x |> mutate(mo = month(date)) |> select(mo, sal),
-          timevec,
-          by = c('mo')
-        )
-      }
-    )
-  ) |>
-  unnest('data') |>
   arrange(bay_segment, yrs, date) |>
-  left_join(ldscale, by = c('bay_segment', 'mo'), relationship = 'many-to-many')
+  left_join(
+    ldscale,
+    by = c('bay_segment', 'mo'),
+    relationship = 'many-to-many'
+  ) |>
+  select(-sal) |>
+  rename(sal = salforeyrmo)
 
 toplo <- newdat |>
   filter(bay_segment == 'OTB') |>
@@ -187,43 +153,72 @@ ggplot(toplo, aes(x = date, y = tn_loadlag)) +
   theme_bw()
 
 tst <- newdat |>
-  filter(bay_segment == 'OTB')
+  group_nest(bay_segment) |>
+  rename(tst = data) |>
+  left_join(trgs, by = c('bay_segment'), relationship = 'one-to-one')
 
-p <- simulate(mods$mod[[1]], data = tst, nsim = 200) |>
-  bind_cols(tst) |>
-  pivot_longer(
-    cols = starts_with('sim'),
-    names_to = 'sim',
-    values_to = 'chla_sim'
-  ) |>
+p <- mods |>
+  left_join(tst, by = c('bay_segment'), relationship = 'one-to-one') |>
   mutate(
-    sim = as.integer(str_remove(sim, 'sim_'))
-  ) |>
-  arrange(sim, date)
+    pyr = pmap(list(mod, tst, thresh), function(mod, tst, thresh) {
+      p <- simulate(mod, data = tst, nsim = 500) |>
+        bind_cols(tst) |>
+        pivot_longer(
+          cols = starts_with('sim'),
+          names_to = 'sim',
+          values_to = 'chla_sim'
+        ) |>
+        mutate(
+          sim = as.integer(str_remove(sim, 'sim_'))
+        ) |>
+        arrange(sim, date)
 
-pyr <- p |>
-  summarise(
-    chla_sim = mean(chla_sim, na.rm = T),
-    .by = c(yrs, yr, ldfac, sim)
-  ) |>
-  summarise(
-    chla_sim = mean(chla_sim, na.rm = T),
-    .by = c(yrs, ldfac, sim)
+      pyr <- p |>
+        summarise(
+          chla_sim = mean(chla_sim, na.rm = T),
+          .by = c(yrs, yr, ldfac, sim)
+        ) |>
+        summarise(
+          chla_sim = mean(chla_sim, na.rm = T),
+          .by = c(yrs, ldfac, sim)
+        )
+      return(pyr)
+    }),
+    pyr2 = map(pyr, function(pyr) {
+      pyr2 <- pyr |>
+        summarise(
+          percexceeds = mean(chla_sim > thresh) * 100,
+          sdexceeds = sd(chla_sim > thresh) * 100,
+          .by = c(yrs, ldfac)
+        )
+
+      return(pyr2)
+    })
   )
 
-ggplot(pyr, aes(x = yrs, y = chla_sim, group = yrs)) +
+toplo <- p |>
+  select(bay_segment, pyr) |>
+  unnest('pyr') |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  )
+
+ggplot(toplo, aes(x = yrs, y = chla_sim, group = yrs)) +
   geom_boxplot() +
-  facet_wrap(~ldfac) +
+  facet_grid(bay_segment ~ ldfac, scale = 'free_y') +
   theme_bw()
 
-pyr2 <- pyr |>
-  summarise(
-    percexceeds = mean(chla_sim > 9.8) * 100,
-    sdexceeds = sd(chla_sim > 9.8) * 100,
-    .by = c(yrs, ldfac)
+toplo <- p |>
+  select(bay_segment, pyr2) |>
+  unnest('pyr2') |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
   )
-ggplot(pyr2, aes(x = yrs, y = percexceeds, color = factor(ldfac))) +
+
+ggplot(toplo, aes(x = yrs, y = percexceeds, color = factor(ldfac))) +
   geom_line() +
+  coord_cartesian(ylim = c(0, 100)) +
+  facet_grid(bay_segment ~ ldfac) +
   geom_ribbon(
     aes(
       ymin = percexceeds - sdexceeds,

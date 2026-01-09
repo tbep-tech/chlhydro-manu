@@ -131,12 +131,12 @@ mod <- gam(
     s(doy, k = 10, bs = 'cc') +
     s(sal, k = 10) +
     s(tn_loadlag, k = 10) +
-    ti(dec_time, doy, k = c(5, 5), bs = c('cr', 'cc')) +
+    ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
     ti(dec_time, sal, k = c(5, 5)) +
-    ti(sal, doy, k = c(5, 5), bs = c('cr', 'cc')) +
-    ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('cr', 'cr')) +
-    ti(tn_loadlag, doy, k = c(5, 5), bs = c('cr', 'cc')) +
-    ti(tn_loadlag, sal, k = c(5, 5), bs = c('cr', 'cr')),
+    ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('tp', 'tp')) +
+    ti(tn_loadlag, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+    ti(tn_loadlag, sal, k = c(5, 5), bs = c('tp', 'tp')),
   data = tomod,
   family = Gamma(link = 'log'),
   knots = list(doy = c(0, 366)),
@@ -221,22 +221,21 @@ mods <- wqdat |>
     mod = map(
       data,
       ~ gam(
-        chla ~ s(dec_time, k = 40, bs = 'cr') +
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
           s(doy, k = 10, bs = 'cc') +
-          s(sal, k = 10, bs = 'cr') +
-          s(tn_loadlag, k = 10, bs = 'cr') +
-          ti(dec_time, doy, k = c(5, 5), bs = c('cr', 'cc')) +
-          ti(dec_time, sal, k = c(5, 5), bs = c('cr', 'cr')) +
-          ti(sal, doy, k = c(5, 5), bs = c('cr', 'cc')) +
-          ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('cr', 'cr')) +
-          ti(tn_loadlag, doy, k = c(5, 5), bs = c('cr', 'cc')) +
-          ti(tn_loadlag, sal, k = c(5, 5), bs = c('cr', 'cr')),
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_loadlag, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_loadlag, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_loadlag, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_loadlag, sal, k = c(5, 5), bs = c('tp', 'tp')),
         data = .x,
         knots = list(doy = c(0, 366)),
         family = Gamma(link = 'log'),
         na.action = na.exclude,
-        method = 'REML',
-        select = T
+        method = 'REML'
       )
     ),
     prds = map2(data, mod, pred_fun),
