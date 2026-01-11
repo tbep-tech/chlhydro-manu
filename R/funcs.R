@@ -90,32 +90,32 @@ pred_fun <- function(datin, modin) {
   moddat$fithi <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_loadlag = max(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = max(tn_load))
   )
   moddat$btfithi <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_loadlag = max(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = max(tn_load))
   )
   moddat$fitmd <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_loadlag = mean(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = mean(tn_load))
   )
   moddat$btfitmd <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_loadlag = mean(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = mean(tn_load))
   )
   moddat$fitlo <- predict(
     modin,
     type = 'link',
-    newdata = moddat %>% mutate(tn_loadlag = min(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = min(tn_load))
   )
   moddat$btfitlo <- predict(
     modin,
     type = 'response',
-    newdata = moddat %>% mutate(tn_loadlag = min(tn_loadlag))
+    newdata = moddat %>% mutate(tn_load = min(tn_load))
   )
 
   salgrd <- moddat |>
@@ -125,26 +125,26 @@ pred_fun <- function(datin, modin) {
 
   # make prediction grids
   toprd <- moddat |>
-    select(date, dec_time, doy, tn_loadlag) |>
+    select(date, dec_time, doy, tn_load) |>
     crossing(
       sal = salgrd
     )
 
   toprdlo <- moddat |>
-    select(date, dec_time, doy, tn_loadlag) |>
-    mutate(tn_loadlag = min(tn_loadlag)) |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = min(tn_load)) |>
     crossing(
       sal = salgrd
     )
   toprdmd <- moddat |>
-    select(date, dec_time, doy, tn_loadlag) |>
-    mutate(tn_loadlag = mean(tn_loadlag)) |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = mean(tn_load)) |>
     crossing(
       sal = salgrd
     )
   toprdhi <- moddat |>
-    select(date, dec_time, doy, tn_loadlag) |>
-    mutate(tn_loadlag = max(tn_loadlag)) |>
+    select(date, dec_time, doy, tn_load) |>
+    mutate(tn_load = max(tn_load)) |>
     crossing(
       sal = salgrd
     )
@@ -468,9 +468,9 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
 
   # prep interp grids by adding month, year columns
   dts <- fits$date
-  fits <- select(fits, -year, -month, -day, -date, -tn_loadlag)
+  fits <- select(fits, -year, -month, -day, -date, -tn_load)
   btfits <- btfits |>
-    select(-year, -date, -month, -day, -tn_loadlag)
+    select(-year, -date, -month, -day, -tn_load)
 
   # sal values occuring by month, used for interpolation
   sal_mon <- data.frame(dat_in) |>
@@ -557,12 +557,12 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
     thresh = c(486, 1451, 799, 349)
   )
 
-  yrsext <- c(yrs[1] - 1, yrs) # for lag
+  # yrsext <- c(yrs[1] - 1, yrs) # for lag
 
   perc <- lddat |>
     filter(bay_segment %in% !!bay_segment) |>
     select(-bay_segment) |>
-    filter(yr %in% yrsext) |>
+    filter(yr %in% yrs) |> # filter(yr %in% yrsext) |>
     summarise(
       tn_load = sum(tn_load),
       .by = c(yr, mo, date)
@@ -575,16 +575,6 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
 
   actload <- perc |>
     arrange(yr, mo) |>
-    mutate(
-      lag1 = lag(tn_load, n = 1),
-      lag2 = lag(tn_load, n = 2),
-      lag3 = lag(tn_load, n = 3)
-    ) |>
-    filter(yr %in% yrs) |>
-    mutate(
-      tn_loadlag = tn_load + lag1 + lag2 + lag3
-    ) |>
-    dplyr::select(-perc, -lag1, -lag2, -lag3) |>
     mutate(
       ldfac = 'Actual Load',
       tn_loadann = sum(tn_load),
@@ -600,17 +590,7 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
       tn_load = perc * tn_loadann
     ) |>
     arrange(ldfac, yr, mo) |>
-    mutate(
-      lag1 = lag(tn_load, n = 1),
-      lag2 = lag(tn_load, n = 2),
-      lag3 = lag(tn_load, n = 3),
-      .by = c(ldfac)
-    ) |>
     filter(yr %in% yrs) |>
-    mutate(
-      tn_loadlag = tn_load + lag1 + lag2 + lag3
-    ) |>
-    dplyr::select(-perc, -lag1, -lag2, -lag3) |>
     mutate(
       ldfac = paste0(
         'TMDL Load Factor: ',

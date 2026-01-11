@@ -5,7 +5,7 @@
 # then plot likelihood of exceeding thresholds by time for each scenario
 
 # must be sequential
-yrs <- c(2022:2024)
+yrs <- c(2015:2024)
 
 trgs <- tbeptools::targets |>
   filter(bay_segment %in% mods$bay_segment) |>
@@ -122,7 +122,7 @@ newdat <- salrates |>
 #   geom_line() +
 #   facet_wrap(ldfac ~ yrs, ncol = 3) +
 #   theme_bw()
-# ggplot(toplo, aes(x = date, y = tn_loadlag)) +
+# ggplot(toplo, aes(x = date, y = tn_load)) +
 #   geom_line() +
 #   facet_grid(ldfac ~ yrs) +
 #   theme_bw()
@@ -136,7 +136,7 @@ p <- mods |>
   left_join(tst, by = c('bay_segment'), relationship = 'one-to-one') |>
   mutate(
     p = pmap(list(mod, tst), function(mod, tst) {
-      simulate(mod, data = tst, nsim = 1000) |>
+      simulate(mod, data = tst, nsim = 500) |>
         bind_cols(tst) |>
         pivot_longer(
           cols = starts_with('sim'),
@@ -290,7 +290,7 @@ toplo <- dat |>
     prds = predict(mod, type = 'response'),
     prds2 = predict(
       mod,
-      newdata = dat |> mutate(tn_loadlag = tn_loadlag / 2),
+      newdata = dat |> mutate(tn_load = tn_load / 2),
       type = 'response'
     )
   )
