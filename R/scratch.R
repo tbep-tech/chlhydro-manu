@@ -4,7 +4,8 @@
 # where salinity and loads are changed proportionally given observed monthly/annual conditions for the year period
 # then plot likelihood of exceeding thresholds by time for each scenario
 
-yrs <- 2017:2021
+# must be sequential
+yrs <- c(2022:2024)
 
 trgs <- tbeptools::targets |>
   filter(bay_segment %in% mods$bay_segment) |>
@@ -114,17 +115,17 @@ newdat <- salrates |>
   select(-sal) |>
   rename(sal = salforeyrmo)
 
-toplo <- newdat |>
-  filter(bay_segment == c('OTB')) |>
-  filter(yrs %in% c(1, 25, 50))
-ggplot(toplo, aes(x = date, y = sal, color = yrs)) +
-  geom_line() +
-  facet_wrap(ldfac ~ yrs, ncol = 3) +
-  theme_bw()
-ggplot(toplo, aes(x = date, y = tn_loadlag)) +
-  geom_line() +
-  facet_grid(ldfac ~ yrs) +
-  theme_bw()
+# toplo <- newdat |>
+#   filter(bay_segment == c('OTB')) |>
+#   filter(yrs %in% c(1, 25, 50))
+# ggplot(toplo, aes(x = date, y = sal, color = yrs)) +
+#   geom_line() +
+#   facet_wrap(ldfac ~ yrs, ncol = 3) +
+#   theme_bw()
+# ggplot(toplo, aes(x = date, y = tn_loadlag)) +
+#   geom_line() +
+#   facet_grid(ldfac ~ yrs) +
+#   theme_bw()
 
 tst <- newdat |>
   group_nest(bay_segment) |>
@@ -173,7 +174,6 @@ p <- mods |>
         )
     })
   )
-
 
 toplo <- p |>
   select(bay_segment, p) |>
@@ -231,7 +231,6 @@ ggplot(toplo, aes(x = yr, y = chla_sim, group = sim)) +
   facet_grid(ldfac ~ yrs) +
   theme_bw()
 
-
 toplo <- p |>
   select(bay_segment, pyr) |>
   unnest('pyr') |>
@@ -280,3 +279,24 @@ ggplot(toplo, aes(x = yrs, y = avexceeds, color = factor(ldfac))) +
     alpha = 0.2
   ) +
   theme_bw()
+
+
+# check predictions for ld / 2
+mod <- mods$mod[[1]]
+
+dat <- mods$data[[1]]
+toplo <- dat |>
+  mutate(
+    prds = predict(mod, type = 'response'),
+    prds2 = predict(
+      mod,
+      newdata = dat |> mutate(tn_loadlag = tn_loadlag / 2),
+      type = 'response'
+    )
+  )
+
+ggplot(toplo, aes(x = date, y = chla)) +
+  geom_point() +
+  geom_line(aes(y = prds), color = 'blue') +
+  geom_line(aes(y = prds2), color = 'red') +
+  theme_minimal()
