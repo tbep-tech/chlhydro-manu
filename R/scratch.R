@@ -5,7 +5,7 @@
 # then plot likelihood of exceeding thresholds by time for each scenario
 
 # must be sequential
-yrs <- c(2015:2024)
+yrs <- c(2021:2024)
 
 trgs <- tbeptools::targets |>
   filter(bay_segment %in% mods$bay_segment) |>

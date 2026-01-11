@@ -557,16 +557,10 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
     thresh = c(486, 1451, 799, 349)
   )
 
-  # yrsext <- c(yrs[1] - 1, yrs) # for lag
-
   perc <- lddat |>
     filter(bay_segment %in% !!bay_segment) |>
     select(-bay_segment) |>
-    filter(yr %in% yrs) |> # filter(yr %in% yrsext) |>
-    summarise(
-      tn_load = sum(tn_load),
-      .by = c(yr, mo, date)
-    ) |>
+    filter(yr %in% yrs) |>
     mutate(
       perc = tn_load / sum(tn_load),
       thresh = lds$thresh[lds$bay_segment == !!bay_segment],

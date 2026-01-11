@@ -71,21 +71,70 @@ lddat <- rdataload(
   ) |>
   summarise(
     tn_load = sum(tn_load),
-    .by = c(bay_segment, yr, mo, date, source)
+    .by = c(bay_segment, yr, mo, date)
   )
+
+# back fill to 1985
+premo <- lddat |>
+  filter(yr %in% c(1995:2005)) |>
+  summarise(
+    tn_load = mean(tn_load),
+    .by = c(bay_segment, mo)
+  ) |>
+  mutate(
+    perc = tn_load / sum(tn_load),
+    .by = c(bay_segment)
+  ) |>
+  select(-tn_load)
+
+lddatpre <- rdataload(
+  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/tnanndat.RData'
+) |>
+  filter(
+    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
+  ) |>
+  rename(
+    yr = year
+  ) |>
+  filter(yr < 1995) |>
+  mutate(
+    bay_segment = factor(
+      bay_segment,
+      levels = c(
+        'Old Tampa Bay',
+        'Hillsborough Bay',
+        'Middle Tampa Bay',
+        'Lower Tampa Bay'
+      ),
+      labels = c('OTB', 'HB', 'MTB', 'LTB')
+    )
+  ) |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, yr)
+  ) |>
+  crossing(
+    mo = 1:12
+  ) |>
+  left_join(premo, by = c('bay_segment', 'mo')) |>
+  mutate(
+    tn_load = perc * tn_load,
+  ) |>
+  select(-perc) |>
+  mutate(
+    date = make_date(year = yr, month = mo, day = 1)
+  )
+
+lddat <- bind_rows(lddatpre, lddat) |>
+  arrange(bay_segment, date)
 
 save(lddat, file = here('data/lddat.RData'))
 
 load(file = here('data/lddat.RData'))
 
-lddatsum <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  )
-
 wqdat <- wqdat |>
-  left_join(lddatsum, by = c('bay_segment', 'date'))
+  left_join(lddat, by = c('bay_segment', 'date')) |>
+  select(-yr, -mo)
 
 save(wqdat, file = here('data/wqdat.RData'))
 
@@ -105,7 +154,7 @@ wqdat |>
 load(file = here('data/wqdat.RData'))
 
 mods <- wqdat |>
-  filter(dec_time >= 1995) |>
+  filter(dec_time >= 1985) |>
   group_nest(bay_segment) |>
   mutate(
     mod = map(
