@@ -1,49 +1,7 @@
-library(tidyverse)
-library(mgcv)
-library(gratia)
-
-load(file = 'data/mods.RData')
-load(file = 'data/wqdat.RData')
-load(file = 'data/lddat.RData')
-
-source('R/funcs.R')
-
-bayseg <- 'OTB'
-prdgrd <- wqdat |>
-  dplyr::select(date, sal, bay_segment) |>
-  mutate(
-    yr = year(date)
-  ) |>
-  filter(yr >= 1995) |>
-  summarise(
-    sal = mean(sal, na.rm = T),
-    .by = c(yr, bay_segment)
-  ) |>
-  mutate(
-    anngrp = case_when(
-      yr < 2010 ~ '1975-2009',
-      yr >= 2010 ~ '2010-2024'
-    )
-  ) |>
-  mutate(
-    md = quantile(sal, 0.5, na.rm = T),
-    hi = quantile(sal, 0.9, na.rm = T),
-    lo = quantile(sal, 0.1, na.rm = T),
-    .by = c(bay_segment, anngrp)
-  )
-
-ggplot(prdgrd, aes(x = yr, y = sal, group = anngrp)) +
-  geom_point() +
-  geom_line(aes(y = md), color = 'blue', size = 1) +
-  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2) +
-  facet_wrap(~bay_segment, scales = 'free_y') +
-  theme_bw()
-
 # fit salinity trends out to 2050, created 1000 predictions using prediction intervals
-# use three loading scenarios: constant at TMDL and 2x increase, 50% decrease
-# how do I do this on a monthly basis - remember models use three month cumulative lag load
-# maybe split into approximate percentages based on historcal monthly distribution? then apply lags
-
+# use four loading scenarios: observed, constant at TMDL, TMDL 2x increase, TMDL 50% decrease
+# simulations are selected for conditions for a given year period
+# where salinity and loads are changed proportionally given observed monthly/annual conditions for the year period
 # then plot likelihood of exceeding thresholds by time for each scenario
 
 yrs <- 2017:2021
@@ -111,13 +69,13 @@ salrates <- salyrrates |>
     dec_time = decimal_date(date)
   )
 
-toplo <- salrates |>
-  filter(yrs %in% c(1, 25, 50))
-ggplot(toplo, aes(x = date, y = salforeyrmo, color = bay_segment, group = yr)) +
-  geom_line() +
-  facet_grid(bay_segment ~ yrs, scales = 'free_x') +
-  # geom_line(aes(y = chk), linetype = 'dashed') +
-  theme_bw()
+# toplo <- salrates |>
+#   filter(yrs %in% c(1, 25, 50))
+# ggplot(toplo, aes(x = date, y = salforeyrmo, color = bay_segment, group = yr)) +
+#   geom_line() +
+#   facet_grid(bay_segment ~ yrs, scales = 'free_x') +
+#   # geom_line(aes(y = chk), linetype = 'dashed') +
+#   theme_bw()
 
 ldscale <- tibble(
   bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
@@ -125,23 +83,39 @@ ldscale <- tibble(
   mutate(
     ldscale = map(
       bay_segment,
-      ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), bay_segment = .x)
+      ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), yrs = yrs, bay_segment = .x)
     )
   ) |>
   unnest('ldscale')
+
+# toplo <- ldscale |>
+#   mutate(
+#     tn_loadannchk = sum(tn_load),
+#     .by = c(bay_segment, yr, ldfac)
+#   )
+# ggplot (toplo, aes(x = date, y = tn_load, color = factor(ldfac))) +
+#   geom_line() +
+#   facet_wrap(~bay_segment, scales = 'free_y') +
+#   theme_minimal()
+
+# ggplot (toplo, aes(x = date, y = tn_loadann, color = factor(ldfac))) +
+#   geom_line(aes(linetype = 'Actual tn_load')) +
+#   geom_line(aes(y = tn_loadannchk, linetype = 'Est sum tn_load')) +
+#   facet_wrap(~bay_segment, scales = 'free_y') +
+#   theme_minimal()
 
 newdat <- salrates |>
   arrange(bay_segment, yrs, date) |>
   left_join(
     ldscale,
-    by = c('bay_segment', 'mo'),
+    by = c('bay_segment', 'date', 'yr', 'mo'),
     relationship = 'many-to-many'
   ) |>
   select(-sal) |>
   rename(sal = salforeyrmo)
 
 toplo <- newdat |>
-  filter(bay_segment == 'OTB') |>
+  filter(bay_segment == c('OTB')) |>
   filter(yrs %in% c(1, 25, 50))
 ggplot(toplo, aes(x = date, y = sal, color = yrs)) +
   geom_line() +
@@ -160,8 +134,8 @@ tst <- newdat |>
 p <- mods |>
   left_join(tst, by = c('bay_segment'), relationship = 'one-to-one') |>
   mutate(
-    pyr = pmap(list(mod, tst, thresh), function(mod, tst, thresh) {
-      p <- simulate(mod, data = tst, nsim = 500) |>
+    p = pmap(list(mod, tst), function(mod, tst) {
+      simulate(mod, data = tst, nsim = 1000) |>
         bind_cols(tst) |>
         pivot_longer(
           cols = starts_with('sim'),
@@ -172,29 +146,91 @@ p <- mods |>
           sim = as.integer(str_remove(sim, 'sim_'))
         ) |>
         arrange(sim, date)
-
-      pyr <- p |>
+    }),
+    pyr = map(p, function(p) {
+      p |>
         summarise(
           chla_sim = mean(chla_sim, na.rm = T),
           .by = c(yrs, yr, ldfac, sim)
+        )
+    }),
+    pyr2 = pmap(list(pyr, thresh), function(pyr, thresh) {
+      pyr |>
+        mutate(
+          exceeds = chla_sim > thresh
         ) |>
         summarise(
-          chla_sim = mean(chla_sim, na.rm = T),
-          .by = c(yrs, ldfac, sim)
+          percexceeds = mean(exceeds, na.rm = T) * 100,
+          .by = c(yrs, sim, ldfac)
         )
-      return(pyr)
     }),
-    pyr2 = map(pyr, function(pyr) {
-      pyr2 <- pyr |>
+    pyr3 = map(pyr2, function(pyr2) {
+      pyr2 |>
         summarise(
-          percexceeds = mean(chla_sim > thresh) * 100,
-          sdexceeds = sd(chla_sim > thresh) * 100,
+          avexceeds = mean(percexceeds, na.rm = T),
+          sdexceeds = sd(percexceeds, na.rm = T),
           .by = c(yrs, ldfac)
         )
-
-      return(pyr2)
     })
   )
+
+
+toplo <- p |>
+  select(bay_segment, p) |>
+  unnest('p') |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  ) |>
+  filter(yrs %in% c(1, 25, 50)) |>
+  filter(bay_segment == 'OTB')
+chlact <- wqdat |>
+  filter(bay_segment == 'OTB') |>
+  select(date, chla) |>
+  filter(date >= min(toplo$date) & date <= max(toplo$date))
+ggplot(toplo, aes(x = date, y = chla_sim, group = sim)) +
+  geom_line(alpha = 0.2) +
+  geom_point(
+    data = chlact,
+    aes(x = date, y = chla),
+    color = 'red',
+    size = 1,
+    inherit.aes = F
+  ) +
+  facet_grid(ldfac ~ yrs) +
+  theme_bw()
+
+toplo <- p |>
+  select(bay_segment, pyr) |>
+  unnest('pyr') |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  ) |>
+  filter(yrs %in% c(1, 25, 50)) |>
+  filter(bay_segment == 'OTB')
+chlact <- wqdat |>
+  filter(bay_segment == 'OTB') |>
+  select(date, chla) |>
+  mutate(
+    yr = year(date)
+  ) |>
+  filter(yr >= min(toplo$yr) & yr <= max(toplo$yr)) |>
+  summarise(
+    chla = mean(chla, na.rm = T),
+    .by = c(yr)
+  )
+
+ggplot(toplo, aes(x = yr, y = chla_sim, group = sim)) +
+  geom_line(alpha = 0.2) +
+  geom_point(
+    data = chlact,
+    aes(x = yr, y = chla),
+    color = 'red',
+    size = 1,
+    inherit.aes = F
+  ) +
+  facet_grid(ldfac ~ yrs) +
+  theme_bw()
+
 
 toplo <- p |>
   select(bay_segment, pyr) |>
@@ -215,14 +251,30 @@ toplo <- p |>
     bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
   )
 
-ggplot(toplo, aes(x = yrs, y = percexceeds, color = factor(ldfac))) +
+ggplot(
+  toplo,
+  aes(x = yrs, y = percexceeds, color = factor(ldfac), group = yrs)
+) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(0, 100)) +
+  facet_grid(bay_segment ~ ldfac) +
+  theme_bw()
+
+toplo <- p |>
+  select(bay_segment, pyr3) |>
+  unnest('pyr3') |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  )
+
+ggplot(toplo, aes(x = yrs, y = avexceeds, color = factor(ldfac))) +
   geom_line() +
   coord_cartesian(ylim = c(0, 100)) +
   facet_grid(bay_segment ~ ldfac) +
   geom_ribbon(
     aes(
-      ymin = percexceeds - sdexceeds,
-      ymax = percexceeds + sdexceeds,
+      ymin = avexceeds - sdexceeds,
+      ymax = avexceeds + sdexceeds,
       fill = factor(ldfac)
     ),
     alpha = 0.2

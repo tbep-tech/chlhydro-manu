@@ -549,81 +549,75 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
 }
 
 # get load scalars for forecasting
-# loads are scaled by ldfac based on average monthly proportion from historical record
+# loads are scaled by ldfac based on monthly proportion in each year from historical record
 # then summed by lags
-ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), bay_segment) {
+ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
   lds <- tibble(
     bay_segment = c('OTB', 'HB', 'MTB', 'LTB'),
     thresh = c(486, 1451, 799, 349)
   )
 
+  yrsext <- c(yrs[1] - 1, yrs) # for lag
+
   perc <- lddat |>
     filter(bay_segment %in% !!bay_segment) |>
     select(-bay_segment) |>
-    filter(yr %in% c(1995:2024)) |>
+    filter(yr %in% yrsext) |>
     summarise(
       tn_load = sum(tn_load),
       .by = c(yr, mo, date)
     ) |>
-    summarise(
-      tn_load = mean(tn_load),
-      .by = c(mo)
-    ) |>
     mutate(
       perc = tn_load / sum(tn_load),
-      thresh = lds$thresh[lds$bay_segment == !!bay_segment]
+      thresh = lds$thresh[lds$bay_segment == !!bay_segment],
+      .by = yr
     )
 
-  lastten <- perc |>
-    crossing(
-      yrs = c(1:4)
-    ) |>
-    arrange(yrs, mo) |>
+  actload <- perc |>
+    arrange(yr, mo) |>
     mutate(
       lag1 = lag(tn_load, n = 1),
       lag2 = lag(tn_load, n = 2),
       lag3 = lag(tn_load, n = 3)
     ) |>
-    filter(yrs == 4) |>
+    filter(yr %in% yrs) |>
     mutate(
       tn_loadlag = tn_load + lag1 + lag2 + lag3
     ) |>
-    dplyr::select(-yrs, -perc, -lag1, -lag2, -lag3) |>
+    dplyr::select(-perc, -lag1, -lag2, -lag3) |>
     mutate(
-      ldfac = 'Last 10 Years'
+      ldfac = 'Actual Load',
+      tn_loadann = sum(tn_load),
+      .by = yr
     )
 
   out <- perc |>
-    dplyr::select(-tn_load) |>
     crossing(
       ldfac = ldfac
     ) |>
     mutate(
-      threshfac = thresh * ldfac,
-      tn_load = perc * threshfac
+      tn_loadann = thresh * ldfac,
+      tn_load = perc * tn_loadann
     ) |>
-    crossing(
-      yrs = c(1:4)
-    ) |>
-    arrange(ldfac, yrs, mo) |>
+    arrange(ldfac, yr, mo) |>
     mutate(
       lag1 = lag(tn_load, n = 1),
       lag2 = lag(tn_load, n = 2),
       lag3 = lag(tn_load, n = 3),
       .by = c(ldfac)
     ) |>
-    filter(yrs == 4) |>
+    filter(yr %in% yrs) |>
     mutate(
       tn_loadlag = tn_load + lag1 + lag2 + lag3
     ) |>
-    dplyr::select(-yrs, -perc, -lag1, -lag2, -lag3) |>
+    dplyr::select(-perc, -lag1, -lag2, -lag3) |>
     mutate(
       ldfac = paste0(
         'TMDL Load Factor: ',
         ldfac
       )
     ) |>
-    bind_rows(lastten) |>
+    bind_rows(actload) |>
     mutate(
       ldfac = factor(
         ldfac,
