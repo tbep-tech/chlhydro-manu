@@ -309,6 +309,9 @@ load(file = here('data/mods.RData'))
 simdat1721 <- simprp_fun(wqdat, lddat, yrs = c(2017:2021))
 simdat9294 <- simprp_fun(wqdat, lddat, yrs = c(1992:1994))
 
+save(simdat1721, file = here('data/simdat1721.RData'))
+save(simdat9294, file = here('data/simdat9294.RData'))
+
 # # view salinity predictions, vary through years
 # toplo <- simdat1721 |>
 #   filter(yrs %in% c(1, 25, 50)) |>
@@ -341,4 +344,7 @@ simdat9294 <- simprp_fun(wqdat, lddat, yrs = c(1992:1994))
 #   )
 
 simprddat1721 <- simprd_fun(mods, simdat1721, nsims = 10000)
+save(simprddat1721, file = here('data/simprddat1721.RData'))
+
 simprddat9294 <- simprd_fun(mods, simdat9294, nsims = 10000)
+save(simprddat9294, file = here('data/simprddat9294.RData'))

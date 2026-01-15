@@ -714,7 +714,7 @@ simprd_fun <- function(mods, simdat, nsims = 100) {
     left_join(tojn, by = c('bay_segment'), relationship = 'one-to-one') |>
     mutate(
       sims = pmap(list(mod, tst), function(mod, tst) {
-        simulate(mod, data = tst, nsim = 100) |>
+        simulate(mod, data = tst, nsim = nsims) |>
           bind_cols(tst) |>
           pivot_longer(
             cols = starts_with('sim'),
@@ -751,7 +751,8 @@ simprd_fun <- function(mods, simdat, nsims = 100) {
             .by = c(yrs, ldfac)
           )
       })
-    )
+    ) |>
+    select(-data, -mod, -prds, -annsum, -sims, -simsyr)
 
   return(out)
 }
