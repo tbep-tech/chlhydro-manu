@@ -2,6 +2,7 @@ library(tbeptools)
 library(tidyverse)
 library(mgcv)
 library(here)
+library(gratia)
 
 source(here('R/funcs.R'))
 
@@ -149,7 +150,7 @@ wqdat |>
     perc_na = n_sal_na / n_tot * 100
   )
 
-# all bay segments -------------------------------------------------------
+# models -----------------------------------------------------------------
 
 load(file = here('data/wqdat.RData'))
 
@@ -292,3 +293,52 @@ hydat <- mohydatraw |>
   )
 
 save(hydat, file = here('data/hydat.RData'))
+
+# model simulations ------------------------------------------------------
+
+# fit salinity trends out to 2050, created xxxx predictions using simulate function (gratia)
+# use four loading scenarios: observed, constant at TMDL, TMDL 2x increase, TMDL 50% decrease
+# simulations are selected for conditions for a given year period
+# where salinity and loads are changed proportionally given observed monthly/annual conditions for the year period
+# then plot likelihood of exceeding thresholds by time for each scenario
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+load(file = here('data/mods.RData'))
+
+simdat1721 <- simprp_fun(wqdat, lddat, yrs = c(2017:2021))
+simdat9294 <- simprp_fun(wqdat, lddat, yrs = c(1992:1994))
+
+# # view salinity predictions, vary through years
+# toplo <- simdat1721 |>
+#   filter(yrs %in% c(1, 25, 50)) |>
+#   filter(ldfac %in% 'Actual Load')
+# ggplot(toplo, aes(x = date, y = sal, group = yrs, color = factor(yrs))) +
+#   geom_line() +
+#   facet_wrap(~bay_segment, scales = 'free_y') +
+#   theme_minimal() +
+#   labs(
+#     color = 'Future years'
+#   )
+
+# # view load scenarios, do not vary through years
+# toplo <- simdat1721 |>
+#   select(bay_segment, tn_load, tn_loadann, ldfac, date) |>
+#   distinct()
+# ggplot(toplo, aes(x = date, y = tn_load, color = factor(ldfac))) +
+#   geom_line() +
+#   facet_wrap(~bay_segment, scales = 'free_y') +
+#   theme_minimal() +
+#   labs(
+#     color = "Load scenario"
+#   )
+# ggplot(toplo, aes(x = date, y = tn_loadann, color = factor(ldfac))) +
+#   geom_line() +
+#   facet_wrap(~bay_segment, scales = 'free_y') +
+#   theme_minimal() +
+#   labs(
+#     color = "Load scenario"
+#   )
+
+simprddat1721 <- simprd_fun(mods, simdat1721, nsims = 10000)
+simprddat9294 <- simprd_fun(mods, simdat9294, nsims = 10000)

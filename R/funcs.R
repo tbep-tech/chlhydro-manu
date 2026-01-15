@@ -601,3 +601,157 @@ ldscale_fun <- function(lddat, ldfac = c(0.5, 1, 2), yrs, bay_segment) {
 
   return(out)
 }
+
+# prep simulation data for salinity/load change scenarios
+simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
+  # check if yrs arg sequential
+  if (any(diff(yrs) > 1)) {
+    stop('yrs argument must be sequential')
+  }
+
+  # calculate annual salinity change rates
+  salyrrates <- wqdat |>
+    dplyr::select(date, sal, bay_segment) |>
+    mutate(
+      yr = year(date)
+    ) |>
+    summarise(
+      sal = mean(sal, na.rm = T),
+      .by = c(yr, bay_segment)
+    ) |>
+    group_nest(bay_segment) |>
+    mutate(
+      salmod = map(
+        data,
+        ~ lm(sal ~ yr, data = .x, na.action = 'na.exclude')
+      ),
+      slopeyr = map_dbl(salmod, ~ coef(.x)[2])
+    ) |>
+    select(-salmod, -data) |>
+    unnest(c('slopeyr')) |>
+    crossing(
+      yrs = c(1:50)
+    ) |>
+    mutate(
+      futureyr = 2024 + yrs,
+      salforeyr = slopeyr * yrs,
+      .by = bay_segment
+    )
+
+  # get salinity avgs by yr, mo for test period
+  saltstyrmo <- wqdat |>
+    dplyr::select(date, sal, bay_segment) |>
+    mutate(
+      yr = year(date),
+      mo = month(date)
+    ) |>
+    filter(yr %in% yrs) |>
+    summarise(
+      sal = mean(sal, na.rm = T),
+      .by = c(yr, mo, bay_segment)
+    )
+
+  # add salinity yr, mo avg for test period to forecasts
+  salrates <- salyrrates |>
+    left_join(
+      saltstyrmo,
+      by = c('bay_segment'),
+      relationship = 'many-to-many'
+    ) |>
+    mutate(
+      salforeyrmo = sal + salforeyr,
+      .by = bay_segment
+    ) |>
+    mutate(
+      future_mo = mo,
+      date = make_date(year = yr, month = mo, day = 1),
+      doy = yday(date),
+      dec_time = decimal_date(date)
+    )
+
+  # get load scaling specific to yrs
+  ldscale <- tibble(
+    bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
+  ) |>
+    mutate(
+      ldscale = map(
+        bay_segment,
+        ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), yrs = yrs, bay_segment = .x)
+      )
+    ) |>
+    unnest('ldscale')
+
+  # join salinity projections with load scenarios
+  out <- salrates |>
+    arrange(bay_segment, yrs, date) |>
+    left_join(
+      ldscale,
+      by = c('bay_segment', 'date', 'yr', 'mo'),
+      relationship = 'many-to-many'
+    ) |>
+    select(-sal) |>
+    rename(sal = salforeyrmo)
+
+  return(out)
+}
+
+# simulation predictions for scenarios
+simprd_fun <- function(mods, simdat, nsims = 100) {
+  trgs <- tbeptools::targets |>
+    filter(bay_segment %in% mods$bay_segment) |>
+    dplyr::select(bay_segment, thresh = chla_thresh) |>
+    mutate(
+      bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+    ) |>
+    tibble()
+
+  tojn <- simdat |>
+    group_nest(bay_segment) |>
+    rename(tst = data) |>
+    left_join(trgs, by = c('bay_segment'), relationship = 'one-to-one')
+
+  out <- mods |>
+    left_join(tojn, by = c('bay_segment'), relationship = 'one-to-one') |>
+    mutate(
+      sims = pmap(list(mod, tst), function(mod, tst) {
+        simulate(mod, data = tst, nsim = 100) |>
+          bind_cols(tst) |>
+          pivot_longer(
+            cols = starts_with('sim'),
+            names_to = 'sim',
+            values_to = 'chla_sim'
+          ) |>
+          mutate(
+            sim = as.integer(str_remove(sim, 'sim_'))
+          ) |>
+          arrange(sim, date)
+      }),
+      simsyr = map(sims, function(sims) {
+        sims |>
+          summarise(
+            chla_sim = mean(chla_sim, na.rm = T),
+            .by = c(yrs, yr, ldfac, sim)
+          )
+      }),
+      exceedsyr = pmap(list(simsyr, thresh), function(simsyr, thresh) {
+        simsyr |>
+          mutate(
+            exceeds = chla_sim > thresh
+          ) |>
+          summarise(
+            percexceeds = mean(exceeds, na.rm = T) * 100,
+            .by = c(yrs, sim, ldfac)
+          )
+      }),
+      exceedssum = map(exceedsyr, function(exceedsyr) {
+        exceedsyr |>
+          summarise(
+            avexceeds = mean(percexceeds, na.rm = T),
+            sdexceeds = sd(percexceeds, na.rm = T),
+            .by = c(yrs, ldfac)
+          )
+      })
+    )
+
+  return(out)
+}
