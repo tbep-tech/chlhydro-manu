@@ -200,6 +200,7 @@ grid_plo <- function(
   allsal = FALSE,
   sal_fac = 3,
   yr_fac = 3,
+  thresh = NULL,
   ncol = NULL,
   grids = FALSE,
   pretty = TRUE,
@@ -425,6 +426,17 @@ grid_plo <- function(
       fill = 'black',
       alpha = 0
     )
+
+  if (thresh) {
+    p <- p +
+      geom_contour(
+        aes(z = res),
+        breaks = thresh,
+        color = "grey",
+        linetype = "solid",
+        linewidth = 1
+      )
+  }
 
   if (!allmo) {
     p <- p + facet_wrap(~month, ncol = ncol)
@@ -696,7 +708,7 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
 }
 
 # simulation predictions for scenarios
-simprd_fun <- function(mods, simdat, nsims = 100) {
+simprd_fun <- function(mods, simdat, nsims = 100, all = F) {
   trgs <- tbeptools::targets |>
     filter(bay_segment %in% mods$bay_segment) |>
     dplyr::select(bay_segment, thresh = chla_thresh) |>
@@ -751,8 +763,12 @@ simprd_fun <- function(mods, simdat, nsims = 100) {
             .by = c(yrs, ldfac)
           )
       })
-    ) |>
-    select(-data, -mod, -prds, -annsum, -sims, -simsyr)
+    )
+
+  if (!all) {
+    out <- out |>
+      select(-data, -mod, -prds, -annsum, -sims, -simsyr)
+  }
 
   return(out)
 }

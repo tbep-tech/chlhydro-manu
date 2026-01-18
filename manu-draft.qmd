@@ -111,11 +111,13 @@ Make a note about forecasting with GAMs, they are tricky because the polynomial 
 
 ## Results
 
-@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salresp, @fig-hydnrm
+@fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salvload, @fig-simplo, @fig-simex
 
 @tbl-gamtab, @tbl-gamcrtab, @tbl-prdnrmtab, @tbl-hydnrmtab
 
 ## Discussion
+
+Why do chlorophyll simulations using actual loads at time zero show lower likelihoods of exceeding the threshold than the actual percent of years in the time period that exceeded?  For example, in OTB from 2017-2021, 4 of the 5 years exceeded the threshold, producing an expectation that the baseline likelihood would be 80% for the actual load at time zero (observed salinity).  First, the actual values for chlorophyll were very close to the threshold.  Given the inherent uncertainty in measured data (observational and process uncertainy) and the uncertainty of the models (model uncertainty, affected by both observation and process uncertainty), a lower than expected likelihood of exceeding the threshold for that time period was provided by the simulations.  Further, annual exceedances are largely driven by high values during the summer months which produce a higher mean value in a variable that is inherently log-distributed.  Because GAMs, like most empirical models, describe the mean response, these high values are poorly described and are not common outputs in the simulated values.  So, the likelihoods of exceeding the threshold can be considered underestimates, whereas the more important result is the relative increase in the likelihood over time given projected salinity changes in the future.  In other words, all scenarios suggested greater exceedances of regulatory thresholds from present to fifty years.
 
 {{< pagebreak >}}
 
@@ -129,15 +131,19 @@ Make a note about forecasting with GAMs, they are tricky because the polynomial 
 
 {{< pagebreak >}}
 
-![Predicted chlorophyll-a ($\mu$g/L) during the rainy season (June to November) from 2005 to present as related to salinity (ppth) by major bay segment.  Facets are arranged to show how the monthly predictions vary across years and different salnity ranges.  The points show the model predicted results for the observed salinity.  Salinity ranges in each plot are fixed the minimum and maximum observed across years for the month. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/gridplo.png){#fig-gridplo}
+![State space representations of modelled annual chlorophyll response per unit change in salinity (x-axis) or nitrogen load (y-axis).  Points represent values for a given year, joined sequentially through time by the grey lines. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/salvload.png){#fig-salvload}
 
 {{< pagebreak >}}
 
-![Modelled chloropyll-a ($\mu$g/L) response with changing salinity (ppth) for 1980 and 2020.  Plot facets show approximate seasonal divisions (February, May, August, November) for each bay segment.  Salinity ranges are fixed to the 5th and 95th percentiles observed for the time period. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/salresp.png){#fig-salresp}
+![Predicted chlorophyll-a ($\mu$g/L) during the rainy season (June to November) from 2005 to present as related to salinity (ppth) by major bay segment.  Facets are arranged to show how the monthly predictions vary across years and different salnity ranges.  The points show the model predicted results for the observed salinity.  Salinity ranges in each plot are fixed the minimum and maximum observed across years for the month. Grey lines show the chlorophyll contour value for the regulatory threshold for each bay segment. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/gridplo.png){#fig-gridplo}
 
 {{< pagebreak >}}
 
-![Salinity-normalized chlorophyll-a ($\mu$g/L) related to hydology from 2004 to present in Old Tampa Bay.  GAM-predicted chlorophyll-a (points) and salinity-normalized (lines) are shown for each quarter (a), followed by hydrologic load anomalies (10$^6$ m$^3$ / quarter) as the load minus the long-term average by quarter (b), followed by the relationship between the predicted minus salinity-normalized chlorophyll and the hydrologic load anomalies by quarter (c). Model R$^2$ values are shown for the linear regression fit (lines) in (c).  JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December.](figs/hydnrm.png){#fig-hydnrm}
+![Likelihood of exceeding regulatory thresholds in each bay segment under different loading conditions and salinity changes.  Results for two time periods are shown where starting conditions were those from 1992 to 1994 (red) and from 2017 to 2021 (blue).  Line show the average and standard deviations of likelihoods of exceeding the thresholds for 10,000 simulations with each GAM by bay segment. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/simplo.png){#fig-simplo}
+
+{{< pagebreak >}}
+
+![Example simulations of chlorophyll-a for Old Tampa Bay for the period 2017 to 2021.  One hundred simulations are shown for the first year where salinity is set at observed and those for expected salinity fifty years from present.  Nitrogen load values are set to observed.  Mean chlorophyll across the simulations are shown by the black loess smooth, whereas actual mean annual chlorophyll is shown by the blue line.  The regulatory threshold is shown by the horizontal red line.](figs/simex.png){#fig-simex}
 
 {{< pagebreak >}}
 

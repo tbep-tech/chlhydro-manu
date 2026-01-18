@@ -197,6 +197,11 @@ dev.off()
 
 # grid plot --------------------------------------------------------------
 
+thresh <- tbeptools::targets |>
+  select(bay_segment, thresh = chla_thresh)
+
+minyr <- 2010
+
 prdplo <- mods |>
   select(bay_segment, prds) |>
   mutate(prds = purrr::map(prds, as_tibble)) |>
@@ -206,39 +211,48 @@ prdplo <- mods |>
     month = lubridate::month(date, label = T, abbr = F),
     yr = lubridate::year(date)
   ) |>
-  filter(month %in% month.name[6:11] & yr >= 2004)
+  filter(month %in% month.name[6:11] & yr >= minyr) |>
+  left_join(thresh, by = 'bay_segment') |>
+  mutate(
+    exceeds = ifelse(res > thresh, 'above', 'below')
+  )
 
 grds <- mods |>
+  left_join(thresh, by = 'bay_segment') |>
   mutate(
-    plo = map2(
-      bay_segment,
-      prds,
-      ~ grid_plo(
-        .y,
-        month = c(6:11),
-        col_lim = c(1, 32),
-        years = c(2004, 2024),
-        allsal = F,
-        ncol = 6,
-        sal_fac = 6,
-        ldmod = 'btfitsmd'
-      ) +
-        labs(title = .x) +
-        geom_line(
-          data = prdplo |> filter(bay_segment == .x),
-          aes(x = yr, y = sal),
-          color = 'black',
-          linetype = 'solid',
-          linewidth = 0.5,
-          inherit.aes = F
+    plo = pmap(
+      list(bay_segment, prds, thresh),
+      function(x, y, z) {
+        grid_plo(
+          y,
+          month = c(6:11),
+          col_lim = c(1, 25),
+          years = c(minyr, 2024),
+          allsal = F,
+          ncol = 6,
+          sal_fac = 6,
+          thresh = z,
+          ldmod = 'btfitsmd'
         ) +
-        geom_point(
-          data = prdplo |> filter(bay_segment == .x),
-          aes(x = yr, y = sal, fill = res),
-          color = 'black',
-          size = 3,
-          shape = 21
-        )
+          labs(title = x, shape = 'Threshold') +
+          geom_line(
+            data = prdplo |> filter(bay_segment == x),
+            aes(x = yr, y = sal),
+            color = 'black',
+            linetype = 'solid',
+            linewidth = 0.5,
+            inherit.aes = F
+          ) +
+          geom_point(
+            data = prdplo |> filter(bay_segment == x),
+            aes(x = yr, y = sal, fill = res, shape = exceeds),
+            color = 'black',
+            size = 3
+          ) +
+          scale_shape_manual(
+            values = c('above' = 22, 'below' = 21)
+          )
+      }
     )
   )
 
@@ -249,120 +263,54 @@ p <- grds$plo[[1]] +
   plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect_y') &
   theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
 
-png(here('figs/gridplo.png'), width = 11, height = 9, units = 'in', res = 300)
+png(here('figs/gridplo.png'), width = 10, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
 # salinity response by year ----------------------------------------------
 
-dec_time <- c(2000, 2020)
-doy <- yday(as.Date(c('1975-02-15', '1975-05-15', '1975-08-15', '1975-11-15')))
+load(file = here('data/simprddat1721.RData'))
+load(file = here('data/simprddat9294.RData'))
 
-plos <- mods |>
+toploa <- simprddat9294 |>
+  select(bay_segment, exceedssum) |>
+  unnest('exceedssum') |>
   mutate(
-    salplo = pmap(
-      list(mod, prds, bay_segment),
-      function(mod, prds, bay_segment) {
-        bayseg <- bay_segment
-        # get salinity ranges
-        prdgrd <- wqdat |>
-          select(date, sal, bay_segment) |>
-          filter(bay_segment %in% bayseg) |>
-          mutate(
-            yr = year(date),
-            anngrp = case_when(
-              yr %in% c(1975:1985) ~ 1980,
-              yr %in% 2015:2024 ~ 2020,
-              T ~ NA_real_
-            ),
-            qrt = quarter(date),
-            qrt = factor(
-              qrt,
-              levels = 1:4,
-              labels = c('Feb', 'May', 'Aug', 'Nov')
-            )
-          ) |>
-          filter(!is.na(anngrp)) |>
-          summarise(
-            salmin = quantile(sal, 0.05, na.rm = T),
-            salmax = quantile(sal, 0.95, na.rm = T),
-            .by = c(qrt, anngrp)
-          ) |>
-          group_by(qrt, anngrp) |>
-          nest() |>
-          mutate(
-            sal = map(data, ~ seq(.x$salmin, .x$salmax, length.out = 20))
-          ) |>
-          select(-data) |>
-          unnest(cols = c(sal)) |>
-          mutate(
-            doy = case_when(
-              qrt == 'Feb' ~ yday(as.Date('1975-02-15')),
-              qrt == 'May' ~ yday(as.Date('1975-05-15')),
-              qrt == 'Aug' ~ yday(as.Date('1975-08-15')),
-              qrt == 'Nov' ~ yday(as.Date('1975-11-15')),
-            ),
-            dec_time = anngrp
-          )
-
-        prds <- predict(mod, newdata = prdgrd, type = 'response', se.fit = TRUE)
-        toplo <- as_tibble(prdgrd) |>
-          mutate(
-            btfit = prds$fit,
-            btupr = prds$fit + (1.96 * prds$se.fit),
-            btlwr = prds$fit - (1.96 * prds$se.fit),
-            date = as.Date(date_decimal(dec_time)),
-            qrt = factor(
-              doy,
-              levels = !!doy,
-              labels = c('Feb', 'May', 'Aug', 'Nov')
-            ),
-            year = year(date)
-          )
-
-        p <- ggplot(
-          toplo,
-          aes(
-            x = sal,
-            y = btfit,
-            group = year,
-            color = factor(year),
-            fill = factor(year)
-          )
-        ) +
-          geom_ribbon(
-            aes(ymin = btlwr, ymax = btupr),
-            alpha = 0.3,
-            color = NA
-          ) +
-          # scale_y_log10() +
-          geom_line() +
-          facet_wrap(~qrt, ncol = 4) + #, scales = 'free_y') +
-          labs(
-            x = 'Salinity (ppth)',
-            y = 'Chl-a (µg/L)',
-            fill = 'Year',
-            color = 'Year',
-            subtitle = bay_segment
-          ) +
-          theme_minimal()
-
-        return(p)
-      }
-    )
+    Period = '1992 - 1994'
+  )
+toplob <- simprddat1721 |>
+  select(bay_segment, exceedssum) |>
+  unnest('exceedssum') |>
+  mutate(
+    Period = '2017 - 2021'
+  )
+toplo <- bind_rows(toploa, toplob) |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
   )
 
-p <- plos$salplo[[1]] +
-  plos$salplo[[2]] +
-  plos$salplo[[3]] +
-  plos$salplo[[4]] +
-  plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect') &
+p <- ggplot(toplo, aes(x = yrs, y = avexceeds, color = Period, fill = Period)) +
+  geom_line() +
+  coord_cartesian(ylim = c(0, NA)) +
+  facet_grid(bay_segment ~ ldfac, scales = 'free_y') +
+  geom_ribbon(
+    aes(
+      ymin = avexceeds - sdexceeds,
+      ymax = avexceeds + sdexceeds,
+    ),
+    alpha = 0.2
+  ) +
+  theme_minimal() +
   theme(
-    legend.position = 'bottom',
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    legend.position = 'bottom'
+  ) +
+  labs(
+    x = 'Years from simulation',
+    y = 'Likelihood of exceeding threshold'
   )
 
-png(here('figs/salresp.png'), width = 8, height = 8, units = 'in', res = 300)
+png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
@@ -464,5 +412,66 @@ p <- p1 +
   )
 
 png(here('figs/hydnrm.png'), width = 8, height = 8, units = 'in', res = 300)
+print(p)
+dev.off()
+
+# sim example for obs conditions -----------------------------------------
+
+load(file = here('data/mods.RData'))
+load(file = here('data/simdat1721.RData'))
+
+act <- mods |>
+  filter(bay_segment == 'OTB') |>
+  unnest('data') |>
+  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
+  select(date, tn_load, sal, dec_time, doy, chla) |>
+  mutate(
+    yr = year(date)
+  ) |>
+  summarise(
+    chla = mean(chla, na.rm = T),
+    .by = yr
+  )
+
+toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
+  filter(bay_segment == 'OTB') |>
+  unnest('simsyr') |>
+  filter(yrs %in% c(1, 50) & ldfac == 'Actual Load') |>
+  mutate(
+    yrs = paste('Year', yrs)
+  )
+
+p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
+  geom_line(alpha = 0.2, aes(group = sim, color = 'Simulations')) +
+  geom_smooth(
+    formula = y ~ x,
+    aes(color = 'Simulations Mean'),
+    se = F,
+    method = 'loess',
+    linewidth = 2
+  ) +
+  geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
+  geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
+  scale_color_manual(
+    values = c(
+      'Simulations' = 'black',
+      'Simulations Mean' = 'black',
+      'Actual' = 'cornflowerblue',
+      'Threshold' = 'red'
+    )
+  ) +
+  facet_wrap(~yrs, ncol = 1) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = 'bottom'
+  ) +
+  labs(
+    x = NULL,
+    y = 'Annual Chl-a (µg/L)',
+    color = NULL
+  )
+
+png(here('figs/simex.png'), width = 5, height = 6, units = 'in', res = 300)
 print(p)
 dev.off()
