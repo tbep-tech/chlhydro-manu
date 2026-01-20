@@ -259,41 +259,6 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
   facet_grid(bay_segment ~ mo, scales = 'free') +
   theme_minimal()
 
-# residuals and hydro load -----------------------------------------------
-
-mohydatraw <- rdataload(
-  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mohydat.RData'
-)
-
-hydat <- mohydatraw |>
-  filter(
-    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
-  ) |>
-  rename(
-    yr = year,
-    mo = month
-  ) |>
-  mutate(
-    bay_segment = factor(
-      bay_segment,
-      levels = c(
-        'Old Tampa Bay',
-        'Hillsborough Bay',
-        'Middle Tampa Bay',
-        'Lower Tampa Bay'
-      ),
-      labels = c('OTB', 'HB', 'MTB', 'LTB')
-    ),
-    date = make_date(year = yr, month = mo, day = 1),
-    qrt = factor(
-      lubridate::quarter(date),
-      levels = 1:4,
-      labels = c('JFM', 'AMJ', 'JAS', 'OND')
-    ),
-  )
-
-save(hydat, file = here('data/hydat.RData'))
-
 # model simulations ------------------------------------------------------
 
 # fit salinity trends out to 2050, created xxxx predictions using simulate function (gratia)

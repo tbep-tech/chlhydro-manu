@@ -8,7 +8,6 @@ source(here('R/funcs.R'))
 
 load(file = here('data/mods.RData'))
 load(file = here('data/wqdat.RData'))
-load(file = here('data/hydat.RData'))
 
 # observed and predicted -------------------------------------------------
 
@@ -393,107 +392,6 @@ p <- ggplot(toplo, aes(x = yrs, y = avexceeds, color = Period, fill = Period)) +
   )
 
 png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
-print(p)
-dev.off()
-
-# hydrology vs norm ------------------------------------------------------
-
-qrthydat <- hydat |>
-  mutate(
-    date = floor_date(date, unit = 'quarter')
-  ) |>
-  summarise(
-    hyqrt = sum(hy_load_106_m3_mo, na.rm = T),
-    .by = c(bay_segment, date, yr, qrt)
-  )
-
-qrtprds <- mods |>
-  select(bay_segment, prds) |>
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds) |>
-  mutate(
-    yr = lubridate::year(date),
-    qrt = factor(
-      lubridate::quarter(date),
-      levels = 1:4,
-      labels = c('JFM', 'AMJ', 'JAS', 'OND')
-    ),
-    date = floor_date(date, unit = 'quarter'),
-  ) |>
-  summarise(
-    chla = mean(chla, na.rm = T),
-    btfit = mean(btfit, na.rm = T),
-    btnorm = mean(btnorm, na.rm = T),
-    .by = c(bay_segment, date, yr, qrt)
-  ) |>
-  inner_join(qrthydat, by = c('bay_segment', 'yr', 'qrt', 'date')) |>
-  mutate(
-    prdresid = btfit - btnorm
-  )
-
-toplo <- qrtprds |>
-  filter(yr >= 2004 & yr <= 2024) |>
-  filter(bay_segment == 'OTB') |>
-  mutate(
-    hyresid = hyqrt - mean(hyqrt, na.rm = T),
-    rsq = round(summary(lm(prdresid ~ hyresid))$r.squared, 2),
-    rsq = paste(qrt, ' (R² = ', rsq, ')', sep = ''),
-    .by = qrt
-  )
-
-fac <- toplo |>
-  select(qrt, rsq) |>
-  distinct()
-
-toplo <- toplo |>
-  mutate(
-    qrtlab = factor(qrt, levels = fac$qrt, labels = fac$rsq)
-  )
-
-p1 <- ggplot(toplo, aes(x = yr)) +
-  geom_point(aes(y = btfit)) +
-  geom_line(aes(y = btnorm), color = 'red') +
-  facet_wrap(~qrt, ncol = 4) +
-  theme_minimal() +
-  labs(
-    y = 'µg/L',
-    x = NULL,
-    title = '(a) Quarterly Mean Predicted Chl-a'
-  )
-
-p2 <- ggplot(toplo, aes(x = yr)) +
-  geom_col(aes(y = hyresid), fill = 'lightblue') +
-  geom_hline(yintercept = 0, linetype = 'solid', color = 'darkgrey') +
-  facet_wrap(~qrt, ncol = 4) +
-  theme_minimal() +
-  labs(
-    y = expression(10^6 ~ m^3 * ' / Quarter'),
-    x = NULL,
-    title = '(b) Quarterly Hydrologic Anomalies'
-  )
-
-p3 <- ggplot(toplo, aes(x = hyresid, y = prdresid)) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'darkgrey') +
-  geom_vline(xintercept = 0, linetype = 'dashed', color = 'darkgrey') +
-  geom_point(color = 'darkgrey') +
-  geom_smooth(method = 'lm', color = 'black', se = F, formula = y ~ x) +
-  facet_wrap(~qrtlab, ncol = 4) +
-  theme_minimal() +
-  labs(
-    x = expression('Hydrologic Anomalies (' * 10^6 ~ m^3 * ' / quarter)'),
-    y = 'Predicted - Normalized Chl-a (µg/L)',
-    title = '(c) Chlorophyll vs Hydrology'
-  )
-
-p <- p1 +
-  p2 +
-  p3 +
-  plot_layout(ncol = 1) &
-  theme(
-    panel.grid.minor = element_blank()
-  )
-
-png(here('figs/hydnrm.png'), width = 8, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
