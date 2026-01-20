@@ -313,6 +313,7 @@ save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 load(file = here('data/simprddat1721.RData'))
 
 rho <- 0.7
+
 totab <- simprddat1721 |>
   select(bay_segment, exceedssum) |>
   unnest(exceedssum) |>
@@ -334,15 +335,45 @@ totab <- simprddat1721 |>
       )
     )
   ) |>
-  select(-`yr 1`, -`yr 25`, -`yr 50`) |>
-  pivot_wider(names_from = var, values_from = c(`yr 25diff`, `yr 50diff`)) |>
-  mutate(
-    `yr 25diff_lower` = `yr 25diff_avexceeds` - 1.96 * `yr 25diff_sdexceeds`, # these are prediction intervals, not confidence intervals
-    `yr 25diff_upper` = `yr 25diff_avexceeds` + 1.96 * `yr 25diff_sdexceeds`,
-    `yr 50diff_lower` = `yr 50diff_avexceeds` - 1.96 * `yr 50diff_sdexceeds`,
-    `yr 50diff_upper` = `yr 50diff_avexceeds` + 1.96 * `yr 50diff_sdexceeds`
+  pivot_wider(
+    names_from = var,
+    values_from = c(`yr 1`, `yr 25`, `yr 50`, `yr 25diff`, `yr 50diff`)
   ) |>
-  select(-contains('sdexceeds'))
+  select(-contains('diff_sd')) |>
+  mutate_if(is.numeric, round, 1) |>
+  mutate(across(contains('sdexceeds'), ~ paste0('(+/-', .x))) |>
+  mutate(across(
+    contains('diff'),
+    ~ ifelse(
+      sign(.x) == 1,
+      paste0('\u2191', .x),
+      ifelse(
+        sign(.x) == 0,
+        paste0('\u2248', .x),
+        paste0('\u2193', .x)
+      )
+    )
+  )) |>
+  mutate(across(contains('diff'), ~ paste0(', ', .x, ')'))) |>
+  unite(
+    'yr 25_sdexceeds',
+    `yr 25_sdexceeds`,
+    `yr 25diff_avexceeds`,
+    sep = ''
+  ) |>
+  unite(
+    'yr 50_sdexceeds',
+    `yr 50_sdexceeds`,
+    `yr 50diff_avexceeds`,
+    sep = ''
+  ) |>
+  mutate(
+    `yr 1_sdexceeds` = paste0(`yr 1_sdexceeds`, ')')
+  ) |>
+  unite('Present', `yr 1_avexceeds`, `yr 1_sdexceeds`, sep = ' ') |>
+  unite('Year 25', `yr 25_avexceeds`, `yr 25_sdexceeds`, sep = ' ') |>
+  unite('Year 50', `yr 50_avexceeds`, `yr 50_sdexceeds`, sep = ' ')
+
 
 salests <- simprddat1721 |>
   select(bay_segment, tst) |>
