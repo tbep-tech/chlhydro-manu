@@ -51,15 +51,22 @@ totab <- mods |>
     })
   ) |>
   select(-mod) |>
-  unnest('summ')
+  unnest('summ') |>
+  mutate(
+    bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
+  )
 
 gamtab <- totab |>
-  as_grouped_data(groups = 'bay_segment') |>
   flextable() |>
   set_header_labels(bay_segment = 'Bay Segment') |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
-  autofit()
+  autofit() |>
+  bold(~ as.numeric(gsub('<', '', p)) < 0.05, j = 9) |>
+  fontsize(size = 9, part = "body") |>
+  hline(i = 10) |>
+  hline(i = 20) |>
+  hline(i = 30)
 
 save(gamtab, file = here('tabs/gamtab.RData'))
 
@@ -72,8 +79,9 @@ datprp <- mods |>
   mutate(
     yr = lubridate::year(date),
     yrcat = case_when(
-      yr < 2004 ~ '1985-2003',
-      yr >= 2004 ~ '2004-2024'
+      yr < 2000 ~ '1985 - 1999',
+      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
+      yr >= 2015 ~ '2015 - 2024'
     ),
     qrt = factor(
       lubridate::quarter(date),
@@ -126,13 +134,13 @@ fntfun <- function(x) {
 
 # Pre-calculate font sizes for each column
 cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
-ft_data <- totab |> as_grouped_data(groups = 'bay_segment')
+ft_data <- totab
 
 gamcrtab <- ft_data |>
   flextable() |>
   set_header_labels(
     bay_segment = 'Bay Segment',
-    yrcat = 'Year group'
+    yrcat = 'Year Group'
   ) |>
   color(j = ~ Annual + JFM + AMJ + JAS + OND, color = colfun)
 
@@ -159,6 +167,9 @@ gamcrtab <- gamcrtab |>
   bold(j = cols, part = 'body') |>
   align(align = 'center', part = 'all', j = cols) |>
   font(part = 'all', fontname = 'Times New Roman') |>
+  hline(i = 3) |>
+  hline(i = 6) |>
+  hline(i = 9) |>
   autofit()
 
 save(gamcrtab, file = here('tabs/gamcrtab.RData'))
@@ -172,8 +183,9 @@ datprp <- mods |>
   mutate(
     yr = lubridate::year(date),
     yrcat = case_when(
-      yr < 2004 ~ '1985-2003',
-      yr >= 2004 ~ '2004-2024'
+      yr < 2000 ~ '1985 - 1999',
+      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
+      yr >= 2015 ~ '2015 - 2024'
     ),
     qrt = factor(
       lubridate::quarter(date),
@@ -185,31 +197,48 @@ datprp <- mods |>
 # mean absolute difference
 totabqrt <- datprp |>
   summarise(
-    mad = mean(abs(btfit - btnorm), na.rm = T),
+    salmad = mean(abs(btfit - btnorm), na.rm = T),
+    ldmad = mean(abs(btnorm - btnormmd), na.rm = T),
     .by = c(bay_segment, yrcat, qrt)
   )
 totabann <- datprp |>
   summarise(
-    mad = mean(abs(btfit - btnorm), na.rm = T),
+    salmad = mean(abs(btfit - btnorm), na.rm = T),
+    ldmad = mean(abs(btnorm - btnormmd), na.rm = T),
     .by = c(bay_segment, yrcat)
   ) |>
   mutate(
     qrt = 'Annual'
   )
 
+levs <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
 totab <- bind_rows(totabqrt, totabann) |>
   mutate(
     qrt = factor(
       qrt,
-      levels = c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+      levels = levs
     ),
-    mad = round(mad, 2)
+    salmad = round(salmad, 2),
+    ldmad = round(ldmad, 2)
+  ) |>
+  pivot_longer(
+    names_to = 'var',
+    values_to = 'mad',
+    cols = c('salmad', 'ldmad')
+  ) |>
+  mutate(
+    var = gsub('mad$', '', var),
+    qrt = as.character(qrt)
+  ) |>
+  unite('var', var, qrt) |>
+  mutate(
+    var = factor(var, levels = c(paste0('sal_', levs), paste0('ld_', levs)))
   ) |>
   pivot_wider(
-    names_from = qrt,
-    values_from = mad
-  ) |>
-  select(bay_segment, yrcat, Annual, JFM, AMJ, JAS, OND)
+    names_from = var,
+    values_from = mad,
+    names_sort = TRUE
+  )
 
 # color function
 colfun <- function(x) {
@@ -226,16 +255,15 @@ fntfun <- function(x) {
 }
 
 # Pre-calculate font sizes for each column
-cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
-ft_data <- totab |> as_grouped_data(groups = 'bay_segment')
+cols <- c(paste0('sal_', levs), paste0('ld_', levs))
+ft_data <- totab |>
+  mutate(
+    bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
+  )
 
 prdnrmtab <- ft_data |>
   flextable() |>
-  set_header_labels(
-    bay_segment = 'Bay Segment',
-    yrcat = 'Year group'
-  ) |>
-  color(j = ~ Annual + JFM + AMJ + JAS + OND, color = colfun)
+  color(j = cols, color = colfun)
 
 # Apply font sizes for each cell
 font_sizes <- fntfun(unlist(ft_data[, cols])) |>
@@ -259,7 +287,24 @@ prdnrmtab <- prdnrmtab |>
   padding(padding = 0, part = 'all') |>
   bold(j = cols, part = 'body') |>
   align(align = 'center', part = 'all', j = cols) |>
+  align(align = 'left', part = 'header', j = cols, i = 1) |>
   font(part = 'all', fontname = 'Times New Roman') |>
+  add_header_row(
+    values = c('', '', rep('Salinity', 5), rep('Load', 5))
+  ) |>
+  merge_at(i = 1, j = c(3:7), part = 'header') |>
+  merge_at(i = 1, j = c(8:12), part = 'header') |>
+  set_header_labels(
+    i = 2,
+    values = c(
+      'Bay Segment',
+      'Year Group',
+      rep(c('Annual', 'JFM', 'AMJ', 'JJA', 'OND'), 2)
+    )
+  ) |>
+  hline(i = 3) |>
+  hline(i = 6) |>
+  hline(i = 9) |>
   autofit()
 
 save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))

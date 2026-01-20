@@ -127,11 +127,11 @@ Why do chlorophyll simulations using actual loads at time zero show lower likeli
 
 {{< pagebreak >}}
 
-![Annual predictions, normalized estimates, and mean salinity estimates for chlorophyll-a by major bay segment from the separate GAMs. Normalized values (solid lines) are those that remove the salinity influence using the mean result of predictions across a range of salinity values at each time step, whereas the mean salinity values (dashed lines) are annual predictions across a constant mean salinity for each bay segment. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/prdnrm.png){#fig-prdnrm}
+![Annual predictions, normalized estimates, and normalized estimates at mean loading for chlorophyll-a by major bay segment from the separate GAMs. Normalized values (solid lines) are those that remove the salinity influence using the mean result of predictions across a range of salinity values at each time step, whereas the normalized, mean load values (dashed lines) are salinity-normalized values at a constant mean load for each bay segment. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/prdnrm.png){#fig-prdnrm}
 
 {{< pagebreak >}}
 
-![State space representations of modelled annual chlorophyll response per unit change in salinity (x-axis) or nitrogen load (y-axis).  Points represent values for a given year, joined sequentially through time by the grey lines. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/salvload.png){#fig-salvload}
+![State space representations of modelled annual chlorophyll response per unit change in salinity (x-axis) or nitrogen load (y-axis).  Points represent values for a given year in (a), joined sequentially through time by the grey lines. Means and 95% confidence for the year groups are shown in (b). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.](figs/salvload.png){#fig-salvload}
 
 {{< pagebreak >}}
 
@@ -151,7 +151,7 @@ Why do chlorophyll simulations using actual loads at time zero show lower likeli
 
 ```{r}
 #| label: tbl-gamtab
-#| tbl-cap: !expr 'paste0("Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay.  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statitic (F), and p-value (p). `s()` indicates a single spline smooth for the predictor and `ti()` indicatees a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+#| tbl-cap: !expr 'paste0("Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay.  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statitic (F), and p-value (p, bold < $\\alpha$ = 0.05). `s()` indicates a single spline smooth for the predictor and `ti()` indicatees a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth); tn_load: total nitrogen load (tons/month). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
 gamtab
 ```
 
@@ -159,7 +159,7 @@ gamtab
 
 ```{r}
 #| label: tbl-gamcrtab
-#| tbl-cap: !expr 'paste0("Correlations between monthly observed and predicted chlorophyll-a for different annual and seasonal periods for each bay segment. The Annual column shows the correlation for the entire year grouping (1985-2003 or 2004-2024) and the remaining columns show the seasonal correlations within the year group. Font shading and size is proportional to the strength of the correlations. See @tbl-gamtab for individual model summary statistics. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+#| tbl-cap: !expr 'paste0("Correlations between monthly observed and predicted chlorophyll-a for different annual and seasonal periods for each bay segment. The Annual column shows the correlation for the entire year grouping (1985-1999, 2000-2014, or 2015-2024) and the remaining columns show the seasonal correlations within the year group. Font shading and size is proportional to the strength of the correlations. See @tbl-gamtab for individual model summary statistics. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
 gamcrtab
 ```
 
@@ -167,7 +167,7 @@ gamcrtab
 
 ```{r}
 #| label: tbl-prdnrmtab
-#| tbl-cap: !expr 'paste0("Mean absolute differences ($\\mu$g/L) between monthly predictions and salinity-normalized results for different annual and seasonal periods for each bay segment. The Annual column shows the differences for the entire year grouping (1985-2003 or 2004-2024) and the remaining columns show the seasonal differences within the year group. Font shading and size is proportional to the magnitude of the differences. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+#| tbl-cap: !expr 'paste0("Mean absolute differences ($\\mu$g/L) for monthly predictions minus salinity-normalized results (Salinity) and salinity-normalized results minus salinity-normalized results at mean loadings (Load). The values in the salinity columns can be considered the relative effects of changes in salinity on chlorophyll-a, whereas those in the load columns are relative effects of loading on chlorophyll-a independent of salinity. The Annual columns show the differences for the entire year grouping (1985-1999, 2000-2014, or 2015-2024) and the remaining columns show the seasonal differences within the year group. Font shading and size is proportional to the magnitude of the differences. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
 prdnrmtab
 ```
 

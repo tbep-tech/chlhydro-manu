@@ -151,49 +151,131 @@ dev.off()
 
 # salinity vs load effects ------------------------------------------------
 
-toplo <- mods |>
+toplo1 <- mods |>
   select(bay_segment, annsum) |>
   unnest(annsum) |>
   # filter(bay_segment == 'OTB') |>
   select(bay_segment, yr, btfit, btnorm, btnormmd) |>
   mutate(
     saleff = btfit - btnorm,
-    ldeff = btnorm - btnormmd
+    ldeff = btnorm - btnormmd,
+    yrgrp = case_when(
+      yr < 2000 ~ '1985 - 1999',
+      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
+      yr >= 2015 ~ '2015 - 2024'
+    )
+  )
+
+toplo2 <- toplo1 |>
+  summarise(
+    saleffmn = mean(saleff),
+    saleffhi = t.test(saleff)$conf.int[2],
+    salefflo = t.test(saleff)$conf.int[1],
+    ldeffmn = mean(ldeff),
+    ldeffhi = t.test(ldeff)$conf.int[2],
+    ldefflo = t.test(ldeff)$conf.int[1],
+    .by = c(yrgrp, bay_segment)
+  )
+
+thm <- theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank()
   )
 
 # create path by year
-p <- ggplot(toplo, aes(x = saleff, y = ldeff)) +
+set.seed(123)
+p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  geom_path(aes(group = 1), color = 'gray80', size = 1) +
-  geom_point(aes(color = yr), size = 2) +
-  # geom_label(aes(lKabel = yr, fill = yr), size = 2, color = 'white') +
+  geom_path(aes(group = 1), color = 'gray80', linewidth = 1) +
+  geom_point(aes(color = yrgrp), size = 2) +
   geom_text_repel(
-    aes(label = yr, color = yr),
+    aes(label = yr, color = yrgrp),
     size = 2,
     max.overlaps = 20
   ) +
-  scale_color_viridis_c(option = "D", end = 0.8) +
-  scale_fill_viridis_c(option = "D", end = 0.8) +
+  scale_color_viridis_d(option = "D", end = 0.8) +
+  # scale_fill_viridis_d(option = "D", end = 0.8) +
   # coord_equal() +
   scale_y_continuous(expand = c(0.1, 0.1)) +
   scale_x_continuous(expand = c(0.1, 0.1)) +
   facet_wrap(~bay_segment, scales = 'free') +
   labs(
     color = "Year",
-    fill = "Year",
     x = 'Salinity Effect µg/L (+ is lower salinity)',
     y = 'Load Effect µg/L (+ is higher load)',
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid.minor = element_blank()
+    subtitle = '(a) By Year'
   )
 
-png(here('figs/salvload.png'), width = 8, height = 7, units = 'in', res = 300)
+# create yrgrp means
+set.seed(123)
+p2 <- ggplot(toplo, aes(x = saleff, y = ldeff)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_point(alpha = 0) +
+  geom_point(
+    data = mns,
+    aes(x = saleffmn, y = ldeffmn, color = yrgrp),
+    size = 4,
+    show.legend = F
+  ) +
+  geom_errorbar(
+    data = mns,
+    aes(
+      x = saleffmn,
+      y = ldeffmn,
+      xmin = salefflo,
+      xmax = saleffhi,
+      color = yrgrp
+    ),
+    orientation = 'y',
+    show.legend = F,
+    lineend = 'square',
+    width = 0
+  ) +
+  geom_errorbar(
+    data = mns,
+    aes(
+      x = saleffmn,
+      y = ldeffmn,
+      ymin = ldefflo,
+      ymax = ldeffhi,
+      color = yrgrp
+    ),
+    show.legend = F,
+    lineend = 'square',
+    width = 0
+  ) +
+  geom_text_repel(
+    aes(label = yr),
+    alpha = 0,
+    max.overlaps = 20
+  ) +
+  scale_color_viridis_d(option = "D", end = 0.8) +
+  scale_y_continuous(expand = c(0.1, 0.1)) +
+  scale_x_continuous(expand = c(0.1, 0.1)) +
+  facet_wrap(~bay_segment, scales = 'free') +
+  labs(
+    color = "Year",
+    x = 'Salinity Effect µg/L (+ is lower salinity)',
+    y = 'Load Effect µg/L (+ is higher load)',
+    subtitle = '(b) Means (+/- 95% Confidence) by Year Group'
+  )
+
+p <- p1 +
+  p2 +
+  plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect') &
+  thm
+
+png(
+  here('figs/salvload.png'),
+  width = 7.5,
+  height = 9.5,
+  units = 'in',
+  res = 300
+)
 print(p)
 dev.off()
-
 
 # grid plot --------------------------------------------------------------
 
