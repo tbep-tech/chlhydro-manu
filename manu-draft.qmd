@@ -73,7 +73,17 @@ load(file = here('tabs/liktab.RData'))
 
 [@testa2025]
 
+Nitrogen loads in Tampa Bay have been reduced substantially since the 1970s due to concerted efforts to quantify and manage external nutrient inputs.  
+
+The objectives of this study were to (1) develop Generalized Additive Models (GAMs) for chlorophyll-a trends for the four major bay segments of Tampa Bay as a function of time, salinity, and total nitrogen loading, (2) quantify the relative influence of salinity changes and nitrogen loading on chlorophyll-a trends, and (3) assess the potential likelihoods of exceeding regulatory criteria under future salinity changes and different loading scenarios. We hypothesize that water quality drivers have changed over time, warranting a shift in thinking about management strategies to focus on dominant factors that influence chlorophyll-a. This shift may be particularly important in upper bay segments where long-term nitrogen loads have changed and residence time may be affected by freshwater inflows and barriers to circulation. Overall, this work provides an in-depth assessment of chlorophyll trends for informing the management of water quality under past and contemporary conditions, with a generalized framework that could be applied in other locations with long-term data.
+
 ## Methods
+
+Tampa Bay, located on the west coast of Florida, is a sub-tropical shallow estuary covering 400 m$^2$ (1036 km$^2$) of open water that includes native habitats for seagrasses, macroalgae, oysters, tidal flats, and hard bottom.  Average depth of the bay is 11 ft with a maximum depth of 43 feet in the dredged shipping channels that traverse the longitudinal axis. The bay is divided into four major segments defined by physical and natural boundaries, with Old Tampa Bay (OTB) in the northwest, Hillsborough Bay (HB) in the norteast, Middle Tampa Bay (MTB), and Lower Tampa Bay (LTB) at the southernmost extent that exchanges with the Gulf of Mexico. The watershed is 2200 mi$2$ (5872 km$^2$) and includes an extensive human presence, with 42% of the land as urban or suburban [@SWFWMD25]. Agricultural and mining activities cover about 25% of the watershed, whereas the remainder includes native habitats of hardwood or scrub uplands and freshwater wetlands.  
+
+Residence time varies with inflow conditions and spatial scale.  Baywide estimates range from approximately one month under high flow conditons and up to five months under low flow conditions [@meyers08].  Spatially, major inflows enter HB via the Hillsborough and Alafia Rivers, MTB via the Little Manatee river, and LTB via the Manatee River. Residence time increases from the mouth of the bay towards the more oligohaline segments, with LTB that exchanges with the Gulf having the shortest residence time of a few days and OTB and HB having the longest.  However, HB flushes relatively rapidly compared to OTB due to major freshwater inflows and enhanced circulation via the main dredge channel that extends from the mouth of the bay to upper HB.  More importantly, OTB has three major bridges with substantial causeways that are known impediments to circulation.  Throughout, we consider salinity as a rough proxy for residence time, while also acknowledging that it reflects hydrologic inputs into each bay segment. 
+
+Long-term monitoring data for Tampa Bay were obtained from the Environmental Protection Commission of Hillsborough County.  This program has been ongoing since the mid-1970s, with monthly sampling at fixed stations throughout the bay.  
 
 ### Data processing
 
@@ -105,7 +115,9 @@ $$
 \end{align}
 $$
 
-### Scenario assessment
+### Partitioning Drivers of Chlorophyll Changes
+
+### Likelihood of Exceeding Regulatory Criteria
 
 Make a note about forecasting with GAMs, they are tricky because the polynomial surfaces behave poorly outside of the range of the observed data.  
 
