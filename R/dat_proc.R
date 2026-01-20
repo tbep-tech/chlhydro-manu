@@ -41,6 +41,8 @@ wqdat <- epcdata |>
   ) |>
   arrange(bay_segment, date) |>
   mutate(
+    chlaorig = chla,
+    chla = zoo::na.approx(chlaorig, x = date, na.rm = F, maxgap = 3),
     salorig = sal,
     sal = zoo::na.approx(salorig, x = date, na.rm = F, maxgap = 3),
     .by = c(bay_segment)
@@ -139,15 +141,17 @@ wqdat <- wqdat |>
 
 save(wqdat, file = here('data/wqdat.RData'))
 
-# salinity NA by bay segment
+# salinity and chlorophyll NA by bay segment
 wqdat |>
   summarise(
     n_sal_na = sum(is.na(salorig)),
+    n_chla_na = sum(is.na(chlaorig)),
     n_tot = n(),
     .by = c(bay_segment)
   ) |>
   mutate(
-    perc_na = n_sal_na / n_tot * 100
+    n_chla_na = n_chla_na / n_tot * 100,
+    n_sal_na = n_sal_na / n_tot * 100
   )
 
 # models -----------------------------------------------------------------
