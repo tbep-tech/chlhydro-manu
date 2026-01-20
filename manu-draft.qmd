@@ -55,7 +55,7 @@ source(here('R/funcs.R'))
 load(file = here('tabs/gamtab.RData'))
 load(file = here('tabs/gamcrtab.RData'))
 load(file = here('tabs/prdnrmtab.RData'))
-load(file = here('tabs/hydnrmtab.RData'))
+load(file = here('tabs/liktab.RData'))
 ```
 
 ## Fig
@@ -113,7 +113,7 @@ Make a note about forecasting with GAMs, they are tricky because the polynomial 
 
 @fig-obsprd, @fig-prdnrm, @fig-gridplo, @fig-salvload, @fig-simplo, @fig-simex
 
-@tbl-gamtab, @tbl-gamcrtab, @tbl-prdnrmtab, @tbl-hydnrmtab
+@tbl-gamtab, @tbl-gamcrtab, @tbl-prdnrmtab, @tbl-liktab
 
 ## Discussion
 
@@ -174,9 +174,9 @@ prdnrmtab
 {{< pagebreak >}}
 
 ```{r}
-#| label: tbl-hydnrmtab
-#| tbl-cap: !expr 'paste0("Linear model fits between the predicted minus salinity-normalized chlorophyll and the hydrologic load anomalies by quarter, bay segment, and annual periods. OTB: Old Tampa Bay, HB: Hillsborough Bay, MTB: Middle Tampa Bay, LTB: Lower Tampa Bay. JFM: January, February, March; AMJ: April, May, June; JAS: July, August, September; OND: October, November, December. p < 0.05 *; p < 0.005 **.")'
-hydnrmtab
+#| label: tbl-liktab
+#| tbl-cap: !expr 'paste0("Likelihoods of exceeding regulatory chlorophyll-a thresholds for each bay segment by simulated time period and loading scenarios under projected future salinity changes.  Results shown are likelihoods with standard deviations and the relative changes from present for years 25 and 50 in parentheses. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay.")'
+liktab
 ```
 
 {{< pagebreak >}}

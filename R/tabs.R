@@ -312,8 +312,17 @@ save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 
 load(file = here('data/simprddat1721.RData'))
 
-rho <- 0.7
+salests <- simprddat1721 |>
+  select(bay_segment, tst) |>
+  unnest(tst) |>
+  filter(yrs %in% c(25, 50)) |>
+  select(bay_segment, Time = yrs, salforeyr) |>
+  distinct() |>
+  mutate(
+    Time = paste('Year', Time)
+  )
 
+rho <- 0.7
 totab <- simprddat1721 |>
   select(bay_segment, exceedssum) |>
   unnest(exceedssum) |>
@@ -341,7 +350,7 @@ totab <- simprddat1721 |>
   ) |>
   select(-contains('diff_sd')) |>
   mutate_if(is.numeric, round, 1) |>
-  mutate(across(contains('sdexceeds'), ~ paste0('(+/-', .x))) |>
+  mutate(across(contains('sdexceeds'), ~ paste0('\n(', .x))) |>
   mutate(across(
     contains('diff'),
     ~ ifelse(
@@ -372,12 +381,56 @@ totab <- simprddat1721 |>
   ) |>
   unite('Present', `yr 1_avexceeds`, `yr 1_sdexceeds`, sep = ' ') |>
   unite('Year 25', `yr 25_avexceeds`, `yr 25_sdexceeds`, sep = ' ') |>
-  unite('Year 50', `yr 50_avexceeds`, `yr 50_sdexceeds`, sep = ' ')
+  unite('Year 50', `yr 50_avexceeds`, `yr 50_sdexceeds`, sep = ' ') |>
+  mutate(
+    ldfac = factor(
+      ldfac,
+      levels = c(
+        'Actual Load',
+        'TMDL Load Factor: 0.5',
+        'TMDL Load Factor: 1',
+        'TMDL Load Factor: 2'
+      )
+    )
+  ) |>
+  pivot_longer(names_to = 'Time', values_to = 'val', Present:`Year 50`) |>
+  pivot_wider(names_from = 'ldfac', values_from = 'val', names_sort = TRUE) |>
+  left_join(salests, by = c('bay_segment', 'Time')) |>
+  mutate(
+    salforeyr = ifelse(is.na(salforeyr), '\u2014', round(salforeyr, 2))
+  ) |>
+  select(
+    bay_segment,
+    Time,
+    `Salinity Change (ppth)` = salforeyr,
+    everything()
+  ) |>
+  mutate(bay_segment = ifelse(duplicated(bay_segment), '', bay_segment))
 
+liktab <- totab |>
+  flextable() |>
+  padding(padding = 0, part = 'all') |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  add_header_row(
+    values = c(rep('', 4), rep('TMDL Load Factor', 3))
+  ) |>
+  merge_at(i = 1, j = c(5:7), part = 'header') |>
+  set_header_labels(
+    i = 2,
+    values = c(
+      'Bay\nSegment',
+      'Time',
+      'Salinity\nChange (ppth)',
+      'Actual Load',
+      '0.5',
+      '1',
+      '2'
+    )
+  ) |>
+  valign(valign = "top", part = "all") |>
+  hline(i = 3) |>
+  hline(i = 6) |>
+  hline(i = 9) |>
+  autofit()
 
-salests <- simprddat1721 |>
-  select(bay_segment, tst) |>
-  unnest(tst) |>
-  filter(yrs %in% c(25, 50)) |>
-  select(bay_segment, yrs, salforeyr) |>
-  distinct()
+save(liktab, file = here('tabs/liktab.RData'))
