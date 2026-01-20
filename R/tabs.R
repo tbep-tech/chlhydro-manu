@@ -311,3 +311,42 @@ save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 # simulation summaries ---------------------------------------------------
 
 load(file = here('data/simprddat1721.RData'))
+
+rho <- 0.7
+totab <- simprddat1721 |>
+  select(bay_segment, exceedssum) |>
+  unnest(exceedssum) |>
+  filter(yrs %in% c(1, 25, 50)) |>
+  mutate(yrs = paste('yr', yrs)) |>
+  pivot_longer(names_to = 'var', values_to = 'val', avexceeds:sdexceeds) |>
+  pivot_wider(names_from = 'yrs', values_from = 'val') |>
+  mutate(
+    `yr 25diff` = case_when(
+      var == 'avexceeds' ~ `yr 25` - `yr 1`,
+      var == 'sdexceeds' ~ sqrt(
+        `yr 25`^2 + `yr 1`^2 - 2 * rho * `yr 25` * `yr 1`
+      )
+    ),
+    `yr 50diff` = case_when(
+      var == 'avexceeds' ~ `yr 50` - `yr 1`,
+      var == 'sdexceeds' ~ sqrt(
+        `yr 50`^2 + `yr 1`^2 - 2 * rho * `yr 50` * `yr 1`
+      )
+    )
+  ) |>
+  select(-`yr 1`, -`yr 25`, -`yr 50`) |>
+  pivot_wider(names_from = var, values_from = c(`yr 25diff`, `yr 50diff`)) |>
+  mutate(
+    `yr 25diff_lower` = `yr 25diff_avexceeds` - 1.96 * `yr 25diff_sdexceeds`, # these are prediction intervals, not confidence intervals
+    `yr 25diff_upper` = `yr 25diff_avexceeds` + 1.96 * `yr 25diff_sdexceeds`,
+    `yr 50diff_lower` = `yr 50diff_avexceeds` - 1.96 * `yr 50diff_sdexceeds`,
+    `yr 50diff_upper` = `yr 50diff_avexceeds` + 1.96 * `yr 50diff_sdexceeds`
+  ) |>
+  select(-contains('sdexceeds'))
+
+salests <- simprddat1721 |>
+  select(bay_segment, tst) |>
+  unnest(tst) |>
+  filter(yrs %in% c(25, 50)) |>
+  select(bay_segment, yrs, salforeyr) |>
+  distinct()
