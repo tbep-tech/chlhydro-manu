@@ -64,6 +64,8 @@ load(file = here('tabs/liktab.RData'))
 
 Nitrogen loads in Tampa Bay have been reduced substantially since the 1970s due to concerted efforts to quantify and manage external nutrient inputs.  
 
+WRTDS vs GAMs
+
 The objectives of this study were to (1) develop Generalized Additive Models (GAMs) for chlorophyll-a trends for the four major bay segments of Tampa Bay as a function of time, salinity, and total nitrogen loading, (2) quantify the relative influence of salinity changes and nitrogen loading on chlorophyll-a trends, and (3) assess the potential likelihoods of exceeding regulatory criteria under future salinity changes and different loading scenarios. We hypothesize that water quality drivers have changed over time, warranting a shift in thinking about management strategies to focus on dominant factors that influence chlorophyll-a. This shift may be particularly important in upper bay segments where long-term nitrogen loads have changed and residence time may be affected by freshwater inflows and barriers to circulation. Overall, this work provides an in-depth assessment of chlorophyll trends for informing the management of water quality under past and contemporary conditions, with a generalized framework that could be applied in other locations with long-term data.
 
 ## Methods
@@ -80,27 +82,32 @@ Reporting and management of external nutrient loads to Tampa Bay have been the r
 
 Long-term monitoring data for Tampa Bay were obtained from the Environmental Protection Commission of Hillsborough County.  This monitoring program has been ongoing since the mid-1970s, with monthly sampling at fixed stations throughout the bay. Surface chlorophyll-a and salinity observations at each station were averaged by month for each bay segment, with salinity being averaged across bottom, mid, and surface depth measurements.  Salinity and chlorophyll gaps were filled using linear interpolation between observed values, where the maximum gap filled was three months.  Salinity gaps accounted for less than 5% of the observations for each bay segment. Chlorophyll gaps were primarily bserved during the beginning of the COVID-19 pandemic in 2020 when sampling did not occur and only accounted for 2 to 3 observations per bay segment.  Monthly data from 1985 to present by bay segment were used for analysis to coincide with the period of record for the nutrient loading data. 
 
-Monthhly nitrogen loading data to each bay segment were estimated following methods in @tbep0494.
+Monthly total nitrogen loading data to each bay segment from 1985 to present were estimated following methods in @tbep0494 [additional details in @tbep0623].  In brief, loading data were estimated as tons per month based on external source, including domestic point-sources (wastewater treatment effluent, reclaimed water), industrial point sources, non-point sources, atmospheric deposition, groundwater/springs, and material losses from nutrients entering the bay through port/shipping activities.  Methods for calculating point source loads are straightforward and are derived from reported flow and concentration data for every permitted entity in the Tampa Bay watershed. Conversely, non-point source loads are estimated from gauged and ungauged portions of the watershed by combining rainfall and flow estimates with event mean concentration data by land use and soil type.  Atmospheric deposition is estimated using rainfall and airshed chemical constituent data obtained from the Verna well-field long-term air quality monitoring site.  Groundwater loading is estimated from aquifer concentration data combined with potentiometric sub-surface flow data, wheras springs loadings are calculated dircectly from discharge and concentration data measured at each location.  Finally, material losses are based on a loss factor per unit shipped at each port location.  For the purpose of this analysis, no distinction is made between load sources such that the total load as the sum across sources was used for modelling.  However, it is noted that trends by sources have varied by location, e.g., non-point source loads have increased in OTB, whereas point sources have decreased [@janicki23].
 
 ### GAMs
+
+Four separate GAMs were created for each bay segment using the combined water quality and loading data for the monthly observations from 1985 to present.  The primary goal was to develop the best fitting model for observed chlorophyll-a by including the effects of salinity, nitrogen loading, and time.  Time was expressed as two separate variables for each time step, first as date expressed as decimal time (e.g., July 1st 2017 is 2017.5) and as day of year to capture a seasonal component.  Each predictor was evaluated as an additive smooth to quantify an individual assocation with chlorophyll-a, whereas interaction smoothers where also included for every pairwise combination of the predictors. No efforts were made for variable selection since the same model structure for describing drivers and scenario testing between bay segments was desired (objectives 2 and 3).  This also allowed direct comparability between models regarding explained variance, either as a whole or for individual predictors.
+
+The model notation was:
 
 $$
 \begin{align}
 \text{chla}_i &\sim \text{Gamma}(\mu_i, \phi) \\
-\log(\mu_i) &= \beta_0 + f_1(\text{dec\_time}_i) + f_2(\text{doy}_i) + f_3(\text{sal}_i) \\
+\log(\mu_i) &= \beta_0 + f_1(\text{dec\_time}_i) + f_2(\text{doy}_i) + f_3(\text{sal}_i) + f_4(\text{load}_i) + \\
 &\quad + f_{12}(\text{dec\_time}_i, \text{doy}_i) \\
 &\quad + f_{13}(\text{dec\_time}_i, \text{sal}_i) \\
-&\quad + f_{23}(\text{sal}_i, \text{doy}_i)
+&\quad + f_{14}(\text{dec\_time}_i, \text{load}_i) \\
+&\quad + f_{23}(\text{doy}_i, \text{sal}_i) \\
+&\quad + f_{24}(\text{doy}_i, \text{load}_i) \\
+&\quad + f_{34}(\text{sal}_i, \text{load}_i)
 \end{align}
 $$
 
-where chlorophyll-a is modelled as a Gamma-distributed response variable with mean $\mu_i$ and dispersion parameter ϕ for observation i.  The decision to use a Gamma distribution as compared to a Gaussian with a log-link function was made given that the variance likely increases with the mean, which is a reasonable expectation for chlorophyll data. The log-transformed mean chlorophyll-a is modelled as an intercept ($\beta_0$) plus smooth functions of decimal time (dec_time), day of year (doy), and salinity (sal), along with tensor product smooth interactions between each pair of the three predictors.  Specifically, $f_1​()$ is a thin plate regression spline with k = 40 basis functions, $f_2()$ is a cyclic cubic regression spline with k = 10 basis functions, $f_3()$ is a thin plate regression spline with k = 10 basis functions, and $f_{12}()$, $f_{13}()$, and $f_{23}()$ are tensor product smooths (excluding main effects) with k = (5, 5) basis functions.  Smoothing parameters were estimated using restricted maximum likelihood (REML).
+where chlorophyll-a is modelled as a Gamma-distributed response variable with mean $\mu_i$ and dispersion parameter ϕ for observation i (as month).  The decision to use a Gamma distribution as compared to a Gaussian with a log-link function was made given that the variance likely increases with the mean, which is a reasonable expectation for chlorophyll data. The log-transformed mean chlorophyll-a is modelled as an intercept ($\beta_0$) plus smooth functions of decimal time (dec_time), day of year (doy), salinity (sal), and loading (load), along with tensor product smooth interactions between each pair of the four predictors.  Specifically, $f_1​()$ is a thin plate regression spline with k = 40 basis functions, $f_2()$ is a cyclic cubic regression spline with k = 10 basis functions, $f_3()$ and $f_4()$ are thin plate regression splines with k = 10 basis functions, and $f_{12}()$, $f_{13}()$, $f_{14}()$, $f_{23}()$, $f_{24}()$, and $f_{34}()$ are tensor product smooths (excluding main effects) with k = (5, 5) basis functions.  Smoothing parameters were estimated using restricted maximum likelihood [@wood11] using the `gam()` function from the mgcv R package [@wood17].
 
-ACF plots showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho).
+The K values (number of basis functions) for each smoother were chosen to allow sufficient degress of freedom to describe the assocation of each predictor with chlorophyll.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the K value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed, suggesting sufficient flexibility to describe the assocation. ACF plots [@venables2002b] also showed minimal autocorrelation of model residuals at lag 1 (all < 0.20 rho), indicating a time-correlated variance structure was not needed.
 
-K values chosen to allow sufficient degress of freedom for each smoother.  Once models were fit, the `gam.check()` function was used to compare the estimated degrees of freedom for each smoother to the maximum degrees of freedom allowed by the k value.  None of the smoothers were within 80% of the maximum degrees of freedom allowed. 
-
-Salinity-normalized predictions were made by predicting chlorophyll-a across a range of salinity values (minimum to maximum observed) at each time step, then taking the mean of those predictions as the salinity-normalized value for that time step.  
+In addition to predicted chlorophyll-a, the GAMs can be used to created two additional types of predictions.  First, salinity-normalized predictions were made by predicting chlorophyll-a across a range of salinity values (minimum to maximum observed) at each time step, then taking the mean of those predictions as the salinity-normalized value for that time step.  This produces a time series that can be considered the chlorophyll trend independent of changes in salinity (i.e., just time and loading).  The approach is consistent with other studies examining the effects of salinity on chlorophyll-a concentrations [@beck17;@murphy19].
 
 $$
 \begin{align}
@@ -108,7 +115,13 @@ $$
 \end{align}
 $$
 
-### Partitioning Drivers of Chlorophyll Changes
+The final set of predictions for each bay segment were salinity-normalized predictions at mean loading, which can be considered the chlorophyll trend independent of changes in both salinity and loading.  This is accomplished by predicting chlorophyll-a at each time step using the mean loading for the bay segment across the entire time series.  Mean loading is used in this case as opposed to the more involved grid based appraoch for salinity.  This was preferred for ease of interpretation and absence of a typical seasonal cycle that would be expected for a variable like salinity.
+
+Finally, the models for each bay segment were evaluated for fit using conventional summary statistics for GAMs. These statistics included Generalized Cross-Validation scores and explained deviance, as well as estimated and reference degrees of freedom, F, and p-values for each smoother.  Simple correlations between observed and predicted chlorophyll were also evaluated for different year groupings (1985-1999, 2000-2014, 2015-2024) and seasonal periods (annual, JFM, AMJ, JAS, OND) to assess when model fit may differ relative to the entire time series.
+
+### Partitioning Drivers of Chlorophyll Change
+
+The second objective was to assess the relative effects of salinity and loading on chlorophyll trends from the GAMs for each bay segment. This was accomplished by comparing the predicted values from the GAMs with those from the salinity-normalized predictions and the salinity-normalized at mean loading predictions. Specifically, the differerence between the predictions and salinity-normalized values as a simple subtraction was used an expression of salinity effects on chlorophyll.  Likewise, 
 
 ### Likelihood of Exceeding Regulatory Criteria
 
@@ -121,6 +134,8 @@ Make a note about forecasting with GAMs, they are tricky because the polynomial 
 @tbl-gamtab, @tbl-gamcrtab, @tbl-prdnrmtab, @tbl-liktab
 
 ## Discussion
+
+Why was this particular GAM structure chosen, e.g., decimal time and doy as opposed to decimal time with large k?
 
 Why do chlorophyll simulations using actual loads at time zero show lower likelihoods of exceeding the threshold than the actual percent of years in the time period that exceeded?  For example, in OTB from 2017-2021, 4 of the 5 years exceeded the threshold, producing an expectation that the baseline likelihood would be 80% for the actual load at time zero (observed salinity).  First, the actual values for chlorophyll were very close to the threshold.  Given the inherent uncertainty in measured data (observational and process uncertainy) and the uncertainty of the models (model uncertainty, affected by both observation and process uncertainty), a lower than expected likelihood of exceeding the threshold for that time period was provided by the simulations.  Further, annual exceedances are largely driven by high values during the summer months which produce a higher mean value in a variable that is inherently log-distributed.  Because GAMs, like most empirical models, describe the mean response, these high values are poorly described and are not common outputs in the simulated values.  So, the likelihoods of exceeding the threshold can be considered underestimates, whereas the more important result is the relative increase in the likelihood over time given projected salinity changes in the future.  In other words, all scenarios suggested greater exceedances of regulatory thresholds from present to fifty years.
 
