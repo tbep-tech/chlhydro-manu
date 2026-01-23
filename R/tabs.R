@@ -115,7 +115,10 @@ totab <- bind_rows(totabqrt, totabann) |>
     names_from = qrt,
     values_from = cr
   ) |>
-  select(bay_segment, yrcat, Annual, JFM, AMJ, JAS, OND)
+  select(bay_segment, yrcat, Annual, JFM, AMJ, JAS, OND) |>
+  mutate(
+    bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
+  )
 
 # color function
 colfun <- function(x) {
@@ -133,9 +136,8 @@ fntfun <- function(x) {
 
 # Pre-calculate font sizes for each column
 cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
-ft_data <- totab
 
-gamcrtab <- ft_data |>
+gamcrtab <- totab |>
   flextable() |>
   set_header_labels(
     bay_segment = 'Bay Segment',
@@ -144,8 +146,8 @@ gamcrtab <- ft_data |>
   color(j = ~ Annual + JFM + AMJ + JAS + OND, color = colfun)
 
 # Apply font sizes for each cell
-font_sizes <- fntfun(unlist(ft_data[, cols])) |>
-  matrix(nrow = nrow(ft_data), ncol = length(cols)) |>
+font_sizes <- fntfun(unlist(totab[, cols])) |>
+  matrix(nrow = nrow(totab), ncol = length(cols)) |>
   as.data.frame()
 names(font_sizes) <- cols
 for (col in cols) {
