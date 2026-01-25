@@ -296,14 +296,15 @@ act <- mods |>
 
 toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
   filter(bay_segment == 'OTB') |>
+  select(-data, -mod, -prds, -sims, -annsum, -tst, -exceedsyr, -exceedssum) |>
   unnest('simsyr') |>
-  filter(yrs %in% c(1, 50) & ldfac == 'Actual Load') |>
+  filter(yrs %in% c(1, 50)) |>
   mutate(
     yrs = paste('Year', yrs)
   )
 
 p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
-  geom_line(alpha = 0.2, aes(group = sim, color = 'Simulations')) +
+  geom_line(alpha = 0.1, aes(group = sim, color = 'Simulations')) +
   geom_smooth(
     formula = y ~ x,
     aes(color = 'Simulations Mean'),
@@ -311,8 +312,8 @@ p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
     method = 'loess',
     linewidth = 2
   ) +
-  geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
   geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
+  geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
   scale_color_manual(
     values = c(
       'Simulations' = 'black',
@@ -321,7 +322,7 @@ p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
       'Threshold' = 'red'
     )
   ) +
-  facet_wrap(~yrs, ncol = 1) +
+  facet_grid(ldfac ~ yrs) +
   theme_minimal() +
   theme(
     panel.grid.minor = element_blank(),
@@ -333,7 +334,7 @@ p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
     color = NULL
   )
 
-png(here('figs/simex.png'), width = 5, height = 6, units = 'in', res = 300)
+png(here('figs/simex.png'), width = 6, height = 7, units = 'in', res = 300)
 print(p)
 dev.off()
 
