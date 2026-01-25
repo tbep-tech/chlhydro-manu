@@ -276,6 +276,114 @@ png(
 print(p)
 dev.off()
 
+# sim example for obs conditions -----------------------------------------
+
+load(file = here('data/mods.RData'))
+load(file = here('data/simdat1721.RData'))
+
+act <- mods |>
+  filter(bay_segment == 'OTB') |>
+  unnest('data') |>
+  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
+  select(date, tn_load, sal, dec_time, doy, chla) |>
+  mutate(
+    yr = year(date)
+  ) |>
+  summarise(
+    chla = mean(chla, na.rm = T),
+    .by = yr
+  )
+
+toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
+  filter(bay_segment == 'OTB') |>
+  unnest('simsyr') |>
+  filter(yrs %in% c(1, 50) & ldfac == 'Actual Load') |>
+  mutate(
+    yrs = paste('Year', yrs)
+  )
+
+p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
+  geom_line(alpha = 0.2, aes(group = sim, color = 'Simulations')) +
+  geom_smooth(
+    formula = y ~ x,
+    aes(color = 'Simulations Mean'),
+    se = F,
+    method = 'loess',
+    linewidth = 2
+  ) +
+  geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
+  geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
+  scale_color_manual(
+    values = c(
+      'Simulations' = 'black',
+      'Simulations Mean' = 'black',
+      'Actual' = 'cornflowerblue',
+      'Threshold' = 'red'
+    )
+  ) +
+  facet_wrap(~yrs, ncol = 1) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = 'bottom'
+  ) +
+  labs(
+    x = NULL,
+    y = 'Annual Chl-a (µg/L)',
+    color = NULL
+  )
+
+png(here('figs/simex.png'), width = 5, height = 6, units = 'in', res = 300)
+print(p)
+dev.off()
+
+# summarized simulation results ------------------------------------------
+
+load(file = here('data/simprddat1721.RData'))
+load(file = here('data/simprddat9294.RData'))
+
+toploa <- simprddat9294 |>
+  select(bay_segment, exceedssum) |>
+  unnest('exceedssum') |>
+  mutate(
+    Period = '1992 - 1994'
+  )
+toplob <- simprddat1721 |>
+  select(bay_segment, exceedssum) |>
+  unnest('exceedssum') |>
+  mutate(
+    Period = '2017 - 2021'
+  )
+toplo <- bind_rows(toploa, toplob) |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  )
+
+p <- ggplot(toplo, aes(x = yrs, y = avexceeds, color = Period, fill = Period)) +
+  geom_line() +
+  coord_cartesian(ylim = c(0, NA)) +
+  facet_grid(bay_segment ~ ldfac, scales = 'free_y') +
+  geom_ribbon(
+    aes(
+      ymin = avexceeds - sdexceeds,
+      ymax = avexceeds + sdexceeds,
+    ),
+    alpha = 0.2
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = 'bottom'
+  ) +
+  labs(
+    x = 'Years from simulation',
+    y = 'Likelihood of exceeding threshold'
+  )
+
+png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
+print(p)
+dev.off()
+
 # grid plot --------------------------------------------------------------
 
 thresh <- tbeptools::targets |>
@@ -345,113 +453,5 @@ p <- grds$plo[[1]] +
   theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
 
 png(here('figs/gridplo.png'), width = 10, height = 8, units = 'in', res = 300)
-print(p)
-dev.off()
-
-# salinity response by year ----------------------------------------------
-
-load(file = here('data/simprddat1721.RData'))
-load(file = here('data/simprddat9294.RData'))
-
-toploa <- simprddat9294 |>
-  select(bay_segment, exceedssum) |>
-  unnest('exceedssum') |>
-  mutate(
-    Period = '1992 - 1994'
-  )
-toplob <- simprddat1721 |>
-  select(bay_segment, exceedssum) |>
-  unnest('exceedssum') |>
-  mutate(
-    Period = '2017 - 2021'
-  )
-toplo <- bind_rows(toploa, toplob) |>
-  mutate(
-    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
-  )
-
-p <- ggplot(toplo, aes(x = yrs, y = avexceeds, color = Period, fill = Period)) +
-  geom_line() +
-  coord_cartesian(ylim = c(0, NA)) +
-  facet_grid(bay_segment ~ ldfac, scales = 'free_y') +
-  geom_ribbon(
-    aes(
-      ymin = avexceeds - sdexceeds,
-      ymax = avexceeds + sdexceeds,
-    ),
-    alpha = 0.2
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid.minor = element_blank(),
-    legend.position = 'bottom'
-  ) +
-  labs(
-    x = 'Years from simulation',
-    y = 'Likelihood of exceeding threshold'
-  )
-
-png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
-print(p)
-dev.off()
-
-# sim example for obs conditions -----------------------------------------
-
-load(file = here('data/mods.RData'))
-load(file = here('data/simdat1721.RData'))
-
-act <- mods |>
-  filter(bay_segment == 'OTB') |>
-  unnest('data') |>
-  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
-  select(date, tn_load, sal, dec_time, doy, chla) |>
-  mutate(
-    yr = year(date)
-  ) |>
-  summarise(
-    chla = mean(chla, na.rm = T),
-    .by = yr
-  )
-
-toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
-  filter(bay_segment == 'OTB') |>
-  unnest('simsyr') |>
-  filter(yrs %in% c(1, 50) & ldfac == 'Actual Load') |>
-  mutate(
-    yrs = paste('Year', yrs)
-  )
-
-p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
-  geom_line(alpha = 0.2, aes(group = sim, color = 'Simulations')) +
-  geom_smooth(
-    formula = y ~ x,
-    aes(color = 'Simulations Mean'),
-    se = F,
-    method = 'loess',
-    linewidth = 2
-  ) +
-  geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
-  geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
-  scale_color_manual(
-    values = c(
-      'Simulations' = 'black',
-      'Simulations Mean' = 'black',
-      'Actual' = 'cornflowerblue',
-      'Threshold' = 'red'
-    )
-  ) +
-  facet_wrap(~yrs, ncol = 1) +
-  theme_minimal() +
-  theme(
-    panel.grid.minor = element_blank(),
-    legend.position = 'bottom'
-  ) +
-  labs(
-    x = NULL,
-    y = 'Annual Chl-a (µg/L)',
-    color = NULL
-  )
-
-png(here('figs/simex.png'), width = 5, height = 6, units = 'in', res = 300)
 print(p)
 dev.off()
