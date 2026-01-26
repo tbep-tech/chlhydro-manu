@@ -41,7 +41,6 @@ toplo <- toplo |>
 p1 <- ggplot(toplo, aes(x = date, y = chla)) +
   geom_point(size = 1, aes(fill = 'Observed'), pch = 21, color = 'darkgrey') +
   geom_line(aes(y = btfit, color = yr)) +
-  # coord_cartesian(xlim = c(2000, 2024)) +
   scale_y_log10() +
   scale_color_viridis_c() +
   scale_fill_manual(values = c('Observed' = 'darkgrey')) +
@@ -75,7 +74,6 @@ p2 <- ggplot(toplo, aes(x = doydum, y = btfit, group = yr, color = yr)) +
   geom_line() +
   # geom_smooth(se = F, method = "gam", formula = y ~ s(x, bs = "tp", k = 10)) +
   scale_x_date(date_labels = '%b', date_breaks = '1 month') +
-  # coord_cartesian(xlim = c(2000, 2024)) +
   scale_y_log10() +
   scale_color_viridis_c() +
   scale_fill_manual(values = c('Observed' = 'darkgrey')) +
@@ -122,7 +120,6 @@ p <- ggplot(toplo, aes(x = yr, y = btfit)) +
     color = "Normalized, Mean Load",
     linetype = "Normalized, Mean Load"
   )) +
-  # coord_cartesian(xlim = c(2000, 2024)) +
   scale_linetype_manual(
     values = c("Normalized" = "solid", "Normalized, Mean Load" = "dashed")
   ) +
@@ -279,12 +276,12 @@ dev.off()
 # sim example for obs conditions -----------------------------------------
 
 load(file = here('data/mods.RData'))
-load(file = here('data/simdat1721.RData'))
+load(file = here('data/simdat9294.RData'))
 
 act <- mods |>
   filter(bay_segment == 'OTB') |>
   unnest('data') |>
-  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
+  filter(date >= as.Date('1992-01-01') & date <= as.Date('1994-12-31')) |>
   select(date, tn_load, sal, dec_time, doy, chla) |>
   mutate(
     yr = year(date)
@@ -294,7 +291,7 @@ act <- mods |>
     .by = yr
   )
 
-toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
+toplo <- simprd_fun(mods, simdat9294, nsims = 100, all = T) |>
   filter(bay_segment == 'OTB') |>
   select(-data, -mod, -prds, -sims, -annsum, -tst, -exceedsyr, -exceedssum) |>
   unnest('simsyr') |>

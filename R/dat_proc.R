@@ -33,6 +33,14 @@ wqdat <- epcdata |>
     sal = mean(sal, na.rm = T),
     .by = c(bay_segment, date)
   ) |>
+  complete(
+    bay_segment,
+    date = seq.Date(
+      from = as.Date('1976-01-01'),
+      to = as.Date('2024-12-01'),
+      by = 'month'
+    )
+  ) |>
   mutate(
     dec_time = decimal_date(date),
     doy = yday(date),
@@ -143,6 +151,7 @@ save(wqdat, file = here('data/wqdat.RData'))
 
 # salinity and chlorophyll NA by bay segment
 wqdat |>
+  filter(dec_time >= 1985) |>
   summarise(
     n_sal_na = sum(is.na(salorig)),
     n_chla_na = sum(is.na(chlaorig)),
