@@ -208,18 +208,18 @@ p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
 
 # create yrgrp means
 set.seed(123)
-p2 <- ggplot(toplo, aes(x = saleff, y = ldeff)) +
+p2 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
   geom_point(alpha = 0) +
   geom_point(
-    data = mns,
+    data = toplo2,
     aes(x = saleffmn, y = ldeffmn, color = yrgrp),
     size = 4,
     show.legend = F
   ) +
   geom_errorbar(
-    data = mns,
+    data = toplo2,
     aes(
       x = saleffmn,
       y = ldeffmn,
@@ -233,7 +233,7 @@ p2 <- ggplot(toplo, aes(x = saleff, y = ldeff)) +
     width = 0
   ) +
   geom_errorbar(
-    data = mns,
+    data = toplo2,
     aes(
       x = saleffmn,
       y = ldeffmn,
@@ -421,8 +421,7 @@ grds <- mods |>
           allsal = F,
           ncol = 6,
           sal_fac = 6,
-          thresh = z,
-          ldmod = 'btfitsmd'
+          thresh = z
         ) +
           labs(title = x, shape = 'Threshold') +
           geom_line(

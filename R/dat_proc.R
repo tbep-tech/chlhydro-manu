@@ -195,10 +195,6 @@ mods <- wqdat |>
           btnorm = mean(btnorm, na.rm = T),
           btfitmd = mean(btfitmd, na.rm = T),
           btnormmd = mean(btnormmd, na.rm = T),
-          btfithi = mean(btfithi, na.rm = T),
-          btnormhi = mean(btnormhi, na.rm = T),
-          btfitlo = mean(btfitlo, na.rm = T),
-          btnormlo = mean(btnormlo, na.rm = T),
           .by = c(yr)
         )
     )

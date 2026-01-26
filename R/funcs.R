@@ -87,16 +87,6 @@ pred_fun <- function(datin, modin) {
   moddat <- datin
   moddat$fit <- predict(modin, type = 'link', newdata = moddat)
   moddat$btfit <- predict(modin, type = 'response', newdata = moddat)
-  moddat$fithi <- predict(
-    modin,
-    type = 'link',
-    newdata = moddat %>% mutate(tn_load = max(tn_load))
-  )
-  moddat$btfithi <- predict(
-    modin,
-    type = 'response',
-    newdata = moddat %>% mutate(tn_load = max(tn_load))
-  )
   moddat$fitmd <- predict(
     modin,
     type = 'link',
@@ -106,16 +96,6 @@ pred_fun <- function(datin, modin) {
     modin,
     type = 'response',
     newdata = moddat %>% mutate(tn_load = mean(tn_load))
-  )
-  moddat$fitlo <- predict(
-    modin,
-    type = 'link',
-    newdata = moddat %>% mutate(tn_load = min(tn_load))
-  )
-  moddat$btfitlo <- predict(
-    modin,
-    type = 'response',
-    newdata = moddat %>% mutate(tn_load = min(tn_load))
   )
 
   salgrd <- moddat |>
@@ -130,59 +110,35 @@ pred_fun <- function(datin, modin) {
       sal = salgrd
     )
 
-  toprdlo <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
-    mutate(tn_load = min(tn_load)) |>
-    crossing(
-      sal = salgrd
-    )
   toprdmd <- moddat |>
     select(date, dec_time, doy, tn_load) |>
     mutate(tn_load = mean(tn_load)) |>
     crossing(
       sal = salgrd
     )
-  toprdhi <- moddat |>
-    select(date, dec_time, doy, tn_load) |>
-    mutate(tn_load = max(tn_load)) |>
-    crossing(
-      sal = salgrd
-    )
 
   # get link predictions, wide format
   fits <- fits_fun(modin, toprd, salgrd, type = 'link')
-  fitshi <- fits_fun(modin, toprdhi, salgrd, type = 'link')
   fitsmd <- fits_fun(modin, toprdmd, salgrd, type = 'link')
-  fitslo <- fits_fun(modin, toprdlo, salgrd, type = 'link')
 
   # get response predictions, wide format
   btfits <- fits_fun(modin, toprd, salgrd, type = 'response')
-  btfitshi <- fits_fun(modin, toprdhi, salgrd, type = 'response')
   btfitsmd <- fits_fun(modin, toprdmd, salgrd, type = 'response')
-  btfitslo <- fits_fun(modin, toprdlo, salgrd, type = 'response')
 
   # normalized results
   norm <- norm_fun(moddat, fits, btfits, salgrd)
-  normlo <- norm_fun(moddat, fitslo, btfitslo, salgrd)[, c('norm', 'btnorm')] |>
-    rename(normlo = norm, btnormlo = btnorm)
   normmd <- norm_fun(moddat, fitsmd, btfitsmd, salgrd)[, c('norm', 'btnorm')] |>
     rename(normmd = norm, btnormmd = btnorm)
-  normhi <- norm_fun(moddat, fitshi, btfitshi, salgrd)[, c('norm', 'btnorm')] |>
-    rename(normhi = norm, btnormhi = btnorm)
 
-  moddat <- bind_cols(norm, normlo, normmd, normhi)
+  moddat <- bind_cols(norm, normmd)
 
   out <- structure(
     .Data = moddat,
     class = c('data.frame', 'tibble'),
     fits = fits,
     btfits = btfits,
-    fitslo = fitslo,
-    btfitslo = btfitslo,
     fitsmd = fitsmd,
     btfitsmd = btfitsmd,
-    fitshi = fitshi,
-    btfitshi = btfitshi,
     salgrd = salgrd
   )
 
@@ -216,7 +172,7 @@ grid_plo <- function(
 
   ldmod <- match.arg(
     ldmod,
-    choices = c('btfits', 'btfitsmd', 'btfitshi', 'btfitslo')
+    choices = c('btfits', 'btfitsmd')
   )
 
   # format predictions as wide
