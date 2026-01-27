@@ -15,7 +15,6 @@ totab <- mods |>
   mutate(
     summ = purrr::map(mod, function(x) {
       summmod <- summary(x)
-      n <- summmod$n
       GCV <- round(summmod$sp.criterion[[1]], 0)
       devexpl <- round(summmod$dev.expl, 2)
 
@@ -35,14 +34,12 @@ totab <- mods |>
           'p' = p.value
         )
 
-      out <- bind_cols(n = n, GCV = GCV, devexpl = devexpl, smths) |>
+      out <- bind_cols(GCV = GCV, devexpl = devexpl, smths) |>
         mutate(
-          n = ifelse(duplicated(n), '', n),
           GCV = ifelse(duplicated(GCV), '', GCV),
           devexpl = ifelse(duplicated(devexpl), '', devexpl)
         ) |>
         rename(
-          `Num. Obs.` = n,
           `Dev. Expl.` = devexpl
         )
 
@@ -61,7 +58,7 @@ gamtab <- totab |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
   autofit() |>
-  bold(~ as.numeric(gsub('<', '', p)) < 0.05, j = 9) |>
+  bold(~ as.numeric(gsub('<', '', p)) < 0.05, j = 8) |>
   fontsize(size = 9, part = "body") |>
   hline(i = 10) |>
   hline(i = 20) |>

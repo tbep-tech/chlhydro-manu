@@ -276,12 +276,12 @@ dev.off()
 # sim example for obs conditions -----------------------------------------
 
 load(file = here('data/mods.RData'))
-load(file = here('data/simdat9294.RData'))
+load(file = here('data/simdat1721.RData'))
 
 act <- mods |>
   filter(bay_segment == 'OTB') |>
   unnest('data') |>
-  filter(date >= as.Date('1992-01-01') & date <= as.Date('1994-12-31')) |>
+  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
   select(date, tn_load, sal, dec_time, doy, chla) |>
   mutate(
     yr = year(date)
@@ -291,7 +291,7 @@ act <- mods |>
     .by = yr
   )
 
-toplo <- simprd_fun(mods, simdat9294, nsims = 100, all = T) |>
+toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
   filter(bay_segment == 'OTB') |>
   select(-data, -mod, -prds, -sims, -annsum, -tst, -exceedsyr, -exceedssum) |>
   unnest('simsyr') |>
@@ -337,20 +337,20 @@ dev.off()
 
 # summarized simulation results ------------------------------------------
 
-load(file = here('data/simprddat1721.RData'))
-load(file = here('data/simprddat9294.RData'))
+load(file = here('data/simprddat1524.RData'))
+load(file = here('data/simprddat8599.RData'))
 
-toploa <- simprddat9294 |>
+toploa <- simprddat8599 |>
   select(bay_segment, exceedssum) |>
   unnest('exceedssum') |>
   mutate(
-    Period = '1992 - 1994'
+    Period = '1985 - 1999'
   )
-toplob <- simprddat1721 |>
+toplob <- simprddat1524 |>
   select(bay_segment, exceedssum) |>
   unnest('exceedssum') |>
   mutate(
-    Period = '2017 - 2021'
+    Period = '2015 - 2024'
   )
 toplo <- bind_rows(toploa, toplob) |>
   mutate(

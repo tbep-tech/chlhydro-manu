@@ -280,11 +280,13 @@ load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
 load(file = here('data/mods.RData'))
 
-simdat1721 <- simprp_fun(wqdat, lddat, yrs = c(2017:2021))
-simdat9294 <- simprp_fun(wqdat, lddat, yrs = c(1992:1994))
+simdat1524 <- simprp_fun(wqdat, lddat, yrs = c(2015:2024))
+simdat0014 <- simprp_fun(wqdat, lddat, yrs = c(2000:2014))
+simdat8599 <- simprp_fun(wqdat, lddat, yrs = c(1985:1999))
 
-save(simdat1721, file = here('data/simdat1721.RData'))
-save(simdat9294, file = here('data/simdat9294.RData'))
+save(simdat1524, file = here('data/simdat1524.RData'))
+save(simdat0014, file = here('data/simdat0014.RData'))
+save(simdat8599, file = here('data/simdat8599.RData'))
 
 # # view salinity predictions, vary through years
 # toplo <- simdat1721 |>
@@ -317,8 +319,11 @@ save(simdat9294, file = here('data/simdat9294.RData'))
 #     color = "Load scenario"
 #   )
 
-simprddat1721 <- simprd_fun(mods, simdat1721, nsims = 1)
-save(simprddat1721, file = here('data/simprddat1721.RData'))
+simprddat1524 <- simprd_fun(mods, simdat1524, nsims = 10000)
+save(simprddat1524, file = here('data/simprddat1524.RData'))
 
-simprddat9294 <- simprd_fun(mods, simdat9294, nsims = 10000)
-save(simprddat9294, file = here('data/simprddat9294.RData'))
+simprddat0014 <- simprd_fun(mods, simdat0014, nsims = 10000)
+save(simprddat0014, file = here('data/simprddat0014.RData'))
+
+simprddat8599 <- simprd_fun(mods, simdat8599, nsims = 10000)
+save(simprddat8599, file = here('data/simprddat8599.RData'))
