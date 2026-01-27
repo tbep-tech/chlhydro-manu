@@ -3,6 +3,7 @@ library(here)
 library(patchwork)
 library(mgcv)
 library(ggrepel)
+library(gratia)
 
 source(here('R/funcs.R'))
 
@@ -276,12 +277,12 @@ dev.off()
 # sim example for obs conditions -----------------------------------------
 
 load(file = here('data/mods.RData'))
-load(file = here('data/simdat1721.RData'))
+load(file = here('data/simdat1524.RData'))
 
 act <- mods |>
   filter(bay_segment == 'OTB') |>
   unnest('data') |>
-  filter(date >= as.Date('2017-01-01') & date <= as.Date('2021-12-31')) |>
+  filter(date >= as.Date('2015-01-01') & date <= as.Date('2024-12-31')) |>
   select(date, tn_load, sal, dec_time, doy, chla) |>
   mutate(
     yr = year(date)
@@ -291,92 +292,95 @@ act <- mods |>
     .by = yr
   )
 
-toplo <- simprd_fun(mods, simdat1721, nsims = 100, all = T) |>
+toplo1 <- simprd_fun(mods, simdat1524, nsims = 100, chunk = F, all = T) |>
   filter(bay_segment == 'OTB') |>
-  select(-data, -mod, -prds, -sims, -annsum, -tst, -exceedsyr, -exceedssum) |>
+  select(-data, -mod, -prds, -annsum, -tst, -exceedsyr, -exceedssum) |>
   unnest('simsyr') |>
   filter(yrs %in% c(1, 50)) |>
   mutate(
     yrs = paste('Year', yrs)
   )
 
-p <- ggplot(toplo, aes(x = yr, y = chla_sim)) +
+simave <- toplo1 |>
+  summarise(
+    chla_sim = mean(chla_sim, na.rm = T),
+    .by = c('bay_segment', 'ldfac', 'yrs', 'yr')
+  )
+
+p1 <- ggplot(toplo1, aes(x = yr, y = chla_sim)) +
   geom_line(alpha = 0.1, aes(group = sim, color = 'Simulations')) +
-  geom_smooth(
-    formula = y ~ x,
-    aes(color = 'Simulations Mean'),
-    se = F,
-    method = 'loess',
+  geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
+  geom_line(
+    data = simave,
+    aes(y = chla_sim, color = 'Mean', group = NULL),
     linewidth = 2
   ) +
-  geom_line(data = act, aes(y = chla, color = 'Actual'), linewidth = 2) +
   geom_hline(aes(yintercept = 9.3, color = 'Threshold'), inherit.aes = F) +
   scale_color_manual(
     values = c(
       'Simulations' = 'black',
-      'Simulations Mean' = 'black',
+      'Mean' = 'black',
       'Actual' = 'cornflowerblue',
       'Threshold' = 'red'
     )
   ) +
   facet_grid(ldfac ~ yrs) +
+  scale_x_continuous(breaks = seq(2015, 2024, by = 2)) +
   theme_minimal() +
   theme(
     panel.grid.minor = element_blank(),
-    legend.position = 'bottom'
+    legend.position = 'bottom',
+    strip.text.y = element_blank()
   ) +
   labs(
     x = NULL,
     y = 'Annual Chl-a (µg/L)',
-    color = NULL
+    color = NULL,
+    subtitle = '(a) Simulations Subset Years 1 and 50\n'
   )
-
-png(here('figs/simex.png'), width = 6, height = 7, units = 'in', res = 300)
-print(p)
-dev.off()
-
-# summarized simulation results ------------------------------------------
 
 load(file = here('data/simprddat1524.RData'))
-load(file = here('data/simprddat8599.RData'))
 
-toploa <- simprddat8599 |>
+toplo2 <- simprddat1524 |>
+  filter(bay_segment == 'OTB') |>
   select(bay_segment, exceedssum) |>
-  unnest('exceedssum') |>
-  mutate(
-    Period = '1985 - 1999'
-  )
-toplob <- simprddat1524 |>
-  select(bay_segment, exceedssum) |>
-  unnest('exceedssum') |>
-  mutate(
-    Period = '2015 - 2024'
-  )
-toplo <- bind_rows(toploa, toplob) |>
-  mutate(
-    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
-  )
+  unnest('exceedssum')
 
-p <- ggplot(toplo, aes(x = yrs, y = avexceeds, color = Period, fill = Period)) +
-  geom_line() +
+p2 <- ggplot(toplo2, aes(x = yrs, y = avexceeds)) +
+  geom_line(aes(color = 'Mean')) +
   coord_cartesian(ylim = c(0, NA)) +
-  facet_grid(bay_segment ~ ldfac, scales = 'free_y') +
+  facet_grid(ldfac ~ .) +
   geom_ribbon(
     aes(
       ymin = avexceeds - sdexceeds,
       ymax = avexceeds + sdexceeds,
+      fill = 'Standard Deviation'
     ),
-    alpha = 0.2
+    alpha = 0.5
   ) +
   theme_minimal() +
+  scale_color_manual(
+    values = c('Mean' = 'black')
+  ) +
+  scale_fill_manual(
+    values = c('Standard Deviation' = 'darkgrey')
+  ) +
   theme(
     panel.grid.minor = element_blank(),
     legend.position = 'bottom'
   ) +
   labs(
-    x = 'Years from simulation',
-    y = 'Likelihood of exceeding threshold'
+    x = 'Years from Simulation Period',
+    y = 'Likelihood of Exceeding Threshold',
+    subtitle = '(b) Likelihood of Chl-a Exceedence\nOver 50 Years',
+    color = NULL,
+    fill = NULL
   )
+
+p <- p1 +
+  p2 +
+  plot_layout(ncol = 2, widths = c(1, 0.5)) &
+  theme(legend.position = 'bottom')
 
 png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
 print(p)

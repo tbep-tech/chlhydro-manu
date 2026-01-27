@@ -664,7 +664,7 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
 }
 
 # simulation predictions for scenarios
-simprd_fun <- function(mods, simdat, nsims = 100, all = F) {
+simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
   trgs <- tbeptools::targets |>
     filter(bay_segment %in% mods$bay_segment) |>
     dplyr::select(bay_segment, thresh = chla_thresh) |>
@@ -679,44 +679,74 @@ simprd_fun <- function(mods, simdat, nsims = 100, all = F) {
     left_join(trgs, by = c('bay_segment'), relationship = 'one-to-one')
 
   out <- mods |>
-    left_join(tojn, by = c('bay_segment'), relationship = 'one-to-one') |>
-    mutate(
-      simsyr = pmap(
-        list(mod, tst, bay_segment),
-        function(mod, tst, bay_segment) {
-          out <- NULL
-          simi <- nsims / 100
-          reps <- rep(simi, 100)
-          for (i in seq_along(reps)) {
-            cat(bay_segment, i, 'of', length(reps), '\n')
-            simout <- simulate(mod, data = tst, nsim = simi) |>
-              bind_cols(tst) |>
-              pivot_longer(
-                cols = starts_with('sim'),
-                names_to = 'sim',
-                values_to = 'chla_sim'
-              ) |>
-              mutate(
-                sim = i * as.integer(str_remove(sim, 'sim_'))
-              ) |>
-              arrange(sim, date) |>
-              summarise(
-                chla_sim = mean(chla_sim, na.rm = T),
-                .by = c(yrs, yr, ldfac, sim)
-              )
-            out <- bind_rows(out, simout)
-          }
+    left_join(tojn, by = c('bay_segment'), relationship = 'one-to-one')
 
-          return(out)
-        }
-      ),
-      # simsyr = map(sims, function(sims) {
-      #   sims |>
-      #     summarise(
-      #       chla_sim = mean(chla_sim, na.rm = T),
-      #       .by = c(yrs, yr, ldfac, sim)
-      #     )
-      # }),
+  if (chunk) {
+    out <- out |>
+      mutate(
+        simsyr = pmap(
+          list(mod, tst, bay_segment),
+          function(mod, tst, bay_segment) {
+            out <- NULL
+            simi <- nsims / 100
+            reps <- rep(simi, 100)
+            # chunking needs to be done to avoid memory issues
+            for (i in seq_along(reps)) {
+              cat(bay_segment, i, 'of', length(reps), '\n')
+              simout <- simulate(mod, data = tst, nsim = simi) |>
+                bind_cols(tst) |>
+                pivot_longer(
+                  cols = starts_with('sim'),
+                  names_to = 'sim',
+                  values_to = 'chla_sim'
+                ) |>
+                mutate(
+                  sim = i * as.integer(str_remove(sim, 'sim_'))
+                ) |>
+                arrange(sim, date) |>
+                summarise(
+                  chla_sim = mean(chla_sim, na.rm = T),
+                  .by = c(yrs, yr, ldfac, sim)
+                )
+
+              out <- bind_rows(out, simout)
+            }
+
+            return(out)
+          }
+        )
+      )
+  }
+
+  if (!chunk) {
+    out <- out |>
+      mutate(
+        sims = pmap(list(mod, tst), function(mod, tst) {
+          simulate(mod, data = tst, nsim = nsims) |>
+            bind_cols(tst) |>
+            pivot_longer(
+              cols = starts_with('sim'),
+              names_to = 'sim',
+              values_to = 'chla_sim'
+            ) |>
+            mutate(
+              sim = as.integer(str_remove(sim, 'sim_'))
+            ) |>
+            arrange(sim, date)
+        }),
+        simsyr = map(sims, function(sims) {
+          sims |>
+            summarise(
+              chla_sim = mean(chla_sim, na.rm = T),
+              .by = c(yrs, yr, ldfac, sim)
+            )
+        })
+      ) |>
+      select(-sims)
+  }
+
+  out <- out |>
+    mutate(
       exceedsyr = pmap(list(simsyr, thresh), function(simsyr, thresh) {
         simsyr |>
           mutate(

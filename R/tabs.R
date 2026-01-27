@@ -309,9 +309,9 @@ save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 
 # simulation summaries ---------------------------------------------------
 
-load(file = here('data/simprddat1721.RData'))
+load(file = here('data/simprddat1524.RData'))
 
-salests <- simprddat1721 |>
+salests <- simprddat1524 |>
   select(bay_segment, tst) |>
   unnest(tst) |>
   filter(yrs %in% c(25, 50)) |>
@@ -322,7 +322,7 @@ salests <- simprddat1721 |>
   )
 
 rho <- 0.7
-totab <- simprddat1721 |>
+totab <- simprddat1524 |>
   select(bay_segment, exceedssum) |>
   unnest(exceedssum) |>
   filter(yrs %in% c(1, 25, 50)) |>
