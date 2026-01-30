@@ -4,11 +4,89 @@ library(patchwork)
 library(mgcv)
 library(ggrepel)
 library(gratia)
+library(maps)
+library(ggspatial)
 
 source(here('R/funcs.R'))
 
 load(file = here('data/mods.RData'))
 load(file = here('data/wqdat.RData'))
+
+# map --------------------------------------------------------------------
+
+flpoly <- map_data('state', 'florida') %>%
+  st_as_sf(coords = c('long', 'lat'), crs = 4326) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  st_cast("POLYGON")
+
+bbox <- st_bbox(tbseg)
+
+minset <- ggplot() +
+  geom_sf(data = flpoly, fill = 'grey', color = NA) +
+  geom_sf(data = st_as_sfc(bbox), fill = NA, color = 'black', linewidth = 0.5) +
+  theme_void() +
+  theme(
+    panel.background = element_rect(fill = '#FFFFFF', colour = 'white'),
+    panel.border = element_rect(colour = 'black', fill = 'transparent')
+  )
+
+segcent <- tbseg %>%
+  st_centroid()
+
+epcpts <- tbeptools::stations %>%
+  select(long = Longitude, lat = Latitude) %>%
+  unique() %>%
+  st_as_sf(coords = c('long', 'lat'), crs = 4326)
+
+thm <- theme(
+  panel.grid = element_blank(),
+  axis.title = element_blank(),
+  axis.text.y = element_text(size = 6),
+  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6),
+  axis.ticks = element_blank()
+)
+
+m <- ggplot() +
+  ggspatial::annotation_map_tile(
+    zoom = 11,
+    type = 'cartolight',
+    cachedir = system.file("rosm.cache", package = "ggspatial")
+  ) +
+  geom_sf(data = epcpts, color = 'black', inherit.aes = F) +
+  annotation_north_arrow(
+    location = 'tl',
+    style = north_arrow_orienteering(fill = c('black', 'black'), text_col = NA),
+    height = unit(0.5, "cm"),
+    width = unit(0.5, "cm")
+  ) +
+  annotation_scale(location = 'br', text_cex = 1) +
+  geom_sf(data = tbseg, fill = NA, color = NA, inherit.aes = F) +
+  geom_sf(data = tbseglines, color = 'black', inherit.aes = F) +
+  geom_sf_text(
+    data = segcent,
+    aes(label = bay_segment),
+    size = 5,
+    color = 'white',
+    inherit.aes = F
+  ) +
+  # annotation_custom(ggplotGrob(minset), xmin = -9.185e6, xmax = -9.17e6, ymin = 3.22e6, ymax = 3.28e6) +
+  annotation_custom(
+    ggplotGrob(minset),
+    xmin = bbox[3] - 0.1,
+    xmax = bbox[3] + 0.015,
+    ymin = bbox[4] - 0.1,
+    ymax = bbox[4] + 0.06
+  ) +
+  coord_sf(
+    xlim = bbox[c('xmin', 'xmax')],
+    ylim = bbox[c('ymin', 'ymax')],
+    crs = 4326
+  ) +
+  thm
+
+png(here('figs/map.png'), width = 4, height = 5, units = 'in', res = 300)
+print(m)
+dev.off()
 
 # observed and predicted -------------------------------------------------
 
