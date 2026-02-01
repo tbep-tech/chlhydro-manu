@@ -163,6 +163,38 @@ wqdat |>
     n_sal_na = n_sal_na / n_tot * 100
   )
 
+# loading data by source -------------------------------------------------
+
+lddatsrc <- rdataload(
+  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/mosdat.RData'
+) |>
+  filter(
+    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
+  ) |>
+  rename(
+    yr = year,
+    mo = month
+  ) |>
+  mutate(
+    bay_segment = factor(
+      bay_segment,
+      levels = c(
+        'Old Tampa Bay',
+        'Hillsborough Bay',
+        'Middle Tampa Bay',
+        'Lower Tampa Bay'
+      ),
+      labels = c('OTB', 'HB', 'MTB', 'LTB')
+    ),
+    date = make_date(year = yr, month = mo, day = 1)
+  ) |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, yr, source)
+  )
+
+save(lddatsrc, file = here('data/lddatsrc.RData'))
+
 # models -----------------------------------------------------------------
 
 load(file = here('data/wqdat.RData'))
