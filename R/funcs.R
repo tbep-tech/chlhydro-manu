@@ -589,11 +589,11 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
     ) |>
     group_nest(bay_segment) |>
     mutate(
-      salmod = map(
+      salmod = purrr::map(
         data,
         ~ lm(sal ~ yr, data = .x, na.action = 'na.exclude')
       ),
-      slopeyr = map_dbl(salmod, ~ coef(.x)[2])
+      slopeyr = purrr::map_dbl(salmod, ~ coef(.x)[2])
     ) |>
     select(-salmod, -data) |>
     unnest(c('slopeyr')) |>
@@ -642,7 +642,7 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
     bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
   ) |>
     mutate(
-      ldscale = map(
+      ldscale = purrr::map(
         bay_segment,
         ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), yrs = yrs, bay_segment = .x)
       )
@@ -684,7 +684,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
   if (chunk) {
     out <- out |>
       mutate(
-        simsyr = pmap(
+        simsyr = purrr::pmap(
           list(mod, tst, bay_segment),
           function(mod, tst, bay_segment) {
             out <- NULL
@@ -721,7 +721,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
   if (!chunk) {
     out <- out |>
       mutate(
-        sims = pmap(list(mod, tst), function(mod, tst) {
+        sims = purrr::pmap(list(mod, tst), function(mod, tst) {
           simulate(mod, data = tst, nsim = nsims) |>
             bind_cols(tst) |>
             pivot_longer(
@@ -734,7 +734,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
             ) |>
             arrange(sim, date)
         }),
-        simsyr = map(sims, function(sims) {
+        simsyr = purrr::map(sims, function(sims) {
           sims |>
             summarise(
               chla_sim = mean(chla_sim, na.rm = T),
@@ -747,7 +747,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
 
   out <- out |>
     mutate(
-      exceedsyr = pmap(list(simsyr, thresh), function(simsyr, thresh) {
+      exceedsyr = purrr::pmap(list(simsyr, thresh), function(simsyr, thresh) {
         simsyr |>
           mutate(
             exceeds = chla_sim > thresh
@@ -757,7 +757,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
             .by = c(yrs, sim, ldfac)
           )
       }),
-      exceedssum = map(exceedsyr, function(exceedsyr) {
+      exceedssum = purrr::map(exceedsyr, function(exceedsyr) {
         exceedsyr |>
           summarise(
             avexceeds = mean(percexceeds, na.rm = T),

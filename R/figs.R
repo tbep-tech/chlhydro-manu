@@ -6,6 +6,7 @@ library(ggrepel)
 library(gratia)
 library(maps)
 library(ggspatial)
+library(sf)
 
 source(here('R/funcs.R'))
 
@@ -464,73 +465,73 @@ png(here('figs/simplo.png'), width = 8, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
-# grid plot --------------------------------------------------------------
+# # grid plot --------------------------------------------------------------
 
-thresh <- tbeptools::targets |>
-  select(bay_segment, thresh = chla_thresh)
+# thresh <- tbeptools::targets |>
+#   select(bay_segment, thresh = chla_thresh)
 
-minyr <- 2010
+# minyr <- 2010
 
-prdplo <- mods |>
-  select(bay_segment, prds) |>
-  mutate(prds = purrr::map(prds, as_tibble)) |>
-  unnest(prds) |>
-  select(bay_segment, date, sal, res = btfitmd) |>
-  mutate(
-    month = lubridate::month(date, label = T, abbr = F),
-    yr = lubridate::year(date)
-  ) |>
-  filter(month %in% month.name[6:11] & yr >= minyr) |>
-  left_join(thresh, by = 'bay_segment') |>
-  mutate(
-    exceeds = ifelse(res > thresh, 'above', 'below')
-  )
+# prdplo <- mods |>
+#   select(bay_segment, prds) |>
+#   mutate(prds = purrr::map(prds, as_tibble)) |>
+#   unnest(prds) |>
+#   select(bay_segment, date, sal, res = btfitmd) |>
+#   mutate(
+#     month = lubridate::month(date, label = T, abbr = F),
+#     yr = lubridate::year(date)
+#   ) |>
+#   filter(month %in% month.name[6:11] & yr >= minyr) |>
+#   left_join(thresh, by = 'bay_segment') |>
+#   mutate(
+#     exceeds = ifelse(res > thresh, 'above', 'below')
+#   )
 
-grds <- mods |>
-  left_join(thresh, by = 'bay_segment') |>
-  mutate(
-    plo = pmap(
-      list(bay_segment, prds, thresh),
-      function(x, y, z) {
-        grid_plo(
-          y,
-          month = c(6:11),
-          col_lim = c(1, 25),
-          years = c(minyr, 2024),
-          allsal = F,
-          ncol = 6,
-          sal_fac = 6,
-          thresh = z
-        ) +
-          labs(title = x, shape = 'Threshold') +
-          geom_line(
-            data = prdplo |> filter(bay_segment == x),
-            aes(x = yr, y = sal),
-            color = 'black',
-            linetype = 'solid',
-            linewidth = 0.5,
-            inherit.aes = F
-          ) +
-          geom_point(
-            data = prdplo |> filter(bay_segment == x),
-            aes(x = yr, y = sal, fill = res, shape = exceeds),
-            color = 'black',
-            size = 3
-          ) +
-          scale_shape_manual(
-            values = c('above' = 22, 'below' = 21)
-          )
-      }
-    )
-  )
+# grds <- mods |>
+#   left_join(thresh, by = 'bay_segment') |>
+#   mutate(
+#     plo = pmap(
+#       list(bay_segment, prds, thresh),
+#       function(x, y, z) {
+#         grid_plo(
+#           y,
+#           month = c(6:11),
+#           col_lim = c(1, 25),
+#           years = c(minyr, 2024),
+#           allsal = F,
+#           ncol = 6,
+#           sal_fac = 6,
+#           thresh = z
+#         ) +
+#           labs(title = x, shape = 'Threshold') +
+#           geom_line(
+#             data = prdplo |> filter(bay_segment == x),
+#             aes(x = yr, y = sal),
+#             color = 'black',
+#             linetype = 'solid',
+#             linewidth = 0.5,
+#             inherit.aes = F
+#           ) +
+#           geom_point(
+#             data = prdplo |> filter(bay_segment == x),
+#             aes(x = yr, y = sal, fill = res, shape = exceeds),
+#             color = 'black',
+#             size = 3
+#           ) +
+#           scale_shape_manual(
+#             values = c('above' = 22, 'below' = 21)
+#           )
+#       }
+#     )
+#   )
 
-p <- grds$plo[[1]] +
-  grds$plo[[2]] +
-  grds$plo[[3]] +
-  grds$plo[[4]] +
-  plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect_y') &
-  theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
+# p <- grds$plo[[1]] +
+#   grds$plo[[2]] +
+#   grds$plo[[3]] +
+#   grds$plo[[4]] +
+#   plot_layout(ncol = 1, guides = 'collect', axis_titles = 'collect_y') &
+#   theme(legend.position = 'bottom', axis.text.x = element_text(size = 7))
 
-png(here('figs/gridplo.png'), width = 10, height = 8, units = 'in', res = 300)
-print(p)
-dev.off()
+# png(here('figs/gridplo.png'), width = 10, height = 8, units = 'in', res = 300)
+# print(p)
+# dev.off()

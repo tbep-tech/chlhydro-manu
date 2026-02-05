@@ -85,55 +85,23 @@ lddat <- rdataload(
     .by = c(bay_segment, yr, mo, date)
   )
 
-# back fill to 1985
-premo <- lddat |>
-  filter(yr %in% c(1995:2005)) |>
-  summarise(
-    tn_load = mean(tn_load),
-    .by = c(bay_segment, mo)
-  ) |>
-  mutate(
-    perc = tn_load / sum(tn_load),
-    .by = c(bay_segment)
-  ) |>
-  select(-tn_load)
-
-lddatpre <- rdataload(
-  'https://github.com/tbep-tech/load-estimates/raw/refs/heads/main/data/tnanndat.RData'
-) |>
-  filter(
-    !bay_segment %in% c('All Segments (- N. BCB)', 'Remainder Lower Tampa Bay')
-  ) |>
+# add pre-1995
+lddatpre <- read.csv(here('data/data-raw/MonthlySegTNLoads8594.csv')) |>
   rename(
-    yr = year
+    bay_segment = BAY_SEG,
+    yr = YEAR,
+    mo = MONTH,
+    tn_load = tnloadkg
   ) |>
-  filter(yr < 1995) |>
+  filter(bay_segment %in% c(1:4)) |>
   mutate(
     bay_segment = factor(
       bay_segment,
-      levels = c(
-        'Old Tampa Bay',
-        'Hillsborough Bay',
-        'Middle Tampa Bay',
-        'Lower Tampa Bay'
-      ),
+      levels = c('1', '2', '3', '4'),
       labels = c('OTB', 'HB', 'MTB', 'LTB')
-    )
-  ) |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, yr)
-  ) |>
-  crossing(
-    mo = 1:12
-  ) |>
-  left_join(premo, by = c('bay_segment', 'mo')) |>
-  mutate(
-    tn_load = perc * tn_load,
-  ) |>
-  select(-perc) |>
-  mutate(
-    date = make_date(year = yr, month = mo, day = 1)
+    ),
+    date = make_date(year = yr, month = mo, day = 1),
+    tn_load = tn_load / 907.2 # kg to tons
   )
 
 lddat <- bind_rows(lddatpre, lddat) |>
@@ -203,7 +171,7 @@ mods <- wqdat |>
   filter(dec_time >= 1985) |>
   group_nest(bay_segment) |>
   mutate(
-    mod = map(
+    mod = purrr::map(
       data,
       ~ gam(
         chla ~ s(dec_time, k = 40, bs = 'tp') +
@@ -223,8 +191,8 @@ mods <- wqdat |>
         method = 'REML'
       )
     ),
-    prds = map2(data, mod, pred_fun),
-    annsum = map(
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
       prds,
       ~ data.frame(.x) |>
         mutate(
@@ -313,12 +281,12 @@ load(file = here('data/lddat.RData'))
 load(file = here('data/mods.RData'))
 
 simdat1524 <- simprp_fun(wqdat, lddat, yrs = c(2015:2024))
-simdat0014 <- simprp_fun(wqdat, lddat, yrs = c(2000:2014))
-simdat8599 <- simprp_fun(wqdat, lddat, yrs = c(1985:1999))
+# simdat0014 <- simprp_fun(wqdat, lddat, yrs = c(2000:2014))
+# simdat8599 <- simprp_fun(wqdat, lddat, yrs = c(1985:1999))
 
 save(simdat1524, file = here('data/simdat1524.RData'))
-save(simdat0014, file = here('data/simdat0014.RData'))
-save(simdat8599, file = here('data/simdat8599.RData'))
+# save(simdat0014, file = here('data/simdat0014.RData'))
+# save(simdat8599, file = here('data/simdat8599.RData'))
 
 # # view salinity predictions, vary through years
 # toplo <- simdat1721 |>
@@ -354,8 +322,8 @@ save(simdat8599, file = here('data/simdat8599.RData'))
 simprddat1524 <- simprd_fun(mods, simdat1524, nsims = 10000)
 save(simprddat1524, file = here('data/simprddat1524.RData'))
 
-simprddat0014 <- simprd_fun(mods, simdat0014, nsims = 10000)
-save(simprddat0014, file = here('data/simprddat0014.RData'))
+# simprddat0014 <- simprd_fun(mods, simdat0014, nsims = 10000)
+# save(simprddat0014, file = here('data/simprddat0014.RData'))
 
-simprddat8599 <- simprd_fun(mods, simdat8599, nsims = 10000)
-save(simprddat8599, file = here('data/simprddat8599.RData'))
+# simprddat8599 <- simprd_fun(mods, simdat8599, nsims = 10000)
+# save(simprddat8599, file = here('data/simprddat8599.RData'))
