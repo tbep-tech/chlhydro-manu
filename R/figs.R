@@ -89,6 +89,121 @@ png(here('figs/map.png'), width = 4, height = 5, units = 'in', res = 300)
 print(m)
 dev.off()
 
+# chl, sal, loading over time --------------------------------------------
+
+chlthresh <- tbeptools::targets |>
+  select(bay_segment, thresh = chla_thresh) |>
+  filter(bay_segment %in% c('OTB', 'HB', 'MTB', 'LTB')) |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  )
+
+ldthresh <- tibble(
+  bay_segment = c('OTB', 'HB', 'MTB', 'LTB'),
+  thresh = c(486, 1451, 799, 349)
+) |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  )
+
+toplo <- wqdat |>
+  filter(dec_time >= 1985) |>
+  select(bay_segment, date, chla, sal, tn_load) |>
+  mutate(
+    yr = year(date)
+  )
+
+toploa <- toplo |>
+  select(bay_segment, yr, chla) |>
+  summarise(
+    val = mean(chla, na.rm = T),
+    hiv = t.test(chla)$conf.int[2],
+    lov = t.test(chla)$conf.int[1],
+    .by = c(bay_segment, yr)
+  )
+
+pa <- ggplot(toploa, aes(x = yr, y = val)) +
+  geom_point(color = 'darkgrey') +
+  geom_errorbar(aes(ymin = lov, ymax = hiv), width = 0, color = 'darkgrey') +
+  geom_hline(
+    data = chlthresh,
+    aes(yintercept = thresh),
+    linetype = 'dashed',
+    color = 'black'
+  ) +
+  facet_wrap(~bay_segment, ncol = 4) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_blank()
+  ) +
+  geom_smooth(method = 'lm', se = F, color = 'black', formula = y ~ x) +
+  labs(
+    x = NULL,
+    y = 'µg/L',
+    subtitle = '(a) Chlorophyll-a'
+  )
+
+toplob <- toplo |>
+  select(bay_segment, yr, sal) |>
+  summarise(
+    val = mean(sal, na.rm = T),
+    hiv = t.test(sal)$conf.int[2],
+    lov = t.test(sal)$conf.int[1],
+    .by = c(bay_segment, yr)
+  )
+
+pb <- ggplot(toplob, aes(x = yr, y = val)) +
+  geom_point(color = 'dodgerblue3') +
+  geom_errorbar(aes(ymin = lov, ymax = hiv), width = 0, color = 'dodgerblue3') +
+  facet_wrap(~bay_segment, ncol = 4) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text = element_blank(),
+    axis.text.x = element_blank()
+  ) +
+  geom_smooth(method = 'lm', se = F, color = 'black', formula = y ~ x) +
+  labs(
+    x = NULL,
+    y = 'ppt',
+    subtitle = '(b) Salinity'
+  )
+
+toploc <- toplo |>
+  select(bay_segment, yr, tn_load) |>
+  summarise(
+    val = sum(tn_load, na.rm = T),
+    .by = c(bay_segment, yr)
+  )
+
+pc <- ggplot(toploc, aes(x = yr, y = val / 1000)) +
+  geom_point(color = 'tomato1') +
+  facet_wrap(~bay_segment, ncol = 4) +
+  geom_hline(
+    data = ldthresh,
+    aes(yintercept = thresh / 1000),
+    linetype = 'dashed',
+    color = 'black'
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text = element_blank()
+  ) +
+  geom_smooth(method = 'lm', se = F, color = 'black', formula = y ~ x) +
+  labs(
+    x = NULL,
+    y = 'tons (x1000)',
+    subtitle = '(c) Total Nitrogen Load'
+  )
+
+p <- pa + pb + pc + plot_layout(ncol = 1)
+
+png(here('figs/obsdat.png'), width = 7, height = 7, units = 'in', res = 300)
+print(p)
+dev.off()
+
 # observed and predicted -------------------------------------------------
 
 toplo <- mods |>
