@@ -204,7 +204,10 @@ p <- ggplot(toplo, aes(x = yr, y = btfit)) +
     values = c("Normalized" = "solid", "Normalized, Mean Load" = "dashed")
   ) +
   scale_color_manual(
-    values = c("Normalized" = "tomato1", "Normalized, Mean Load" = "blue")
+    values = c(
+      "Normalized" = "tomato1",
+      "Normalized, Mean Load" = "dodgerblue3"
+    )
   ) +
   scale_fill_manual(values = c("Predicted" = "black")) +
   facet_wrap(~bay_segment, scales = 'free_y') +
@@ -225,7 +228,68 @@ png(here('figs/prdnrm.png'), width = 7, height = 5, units = 'in', res = 300)
 print(p)
 dev.off()
 
-# salinity vs load effects ------------------------------------------------
+# salinity v load effects ------------------------------------------------
+
+toplo <- mods |>
+  select(bay_segment, annsum) |>
+  unnest(annsum) |>
+  mutate(
+    saleff = btfit - btnorm,
+    ldeff = btnorm - btnormmd
+  ) |>
+  select(bay_segment, yr, saleff, ldeff) |>
+  pivot_longer(
+    cols = c(saleff, ldeff),
+    names_to = 'var',
+    values_to = 'val'
+  )
+
+pa <- ggplot(toplo |> filter(var == 'saleff'), aes(x = yr, y = val)) +
+  geom_hline(yintercept = 0, linetype = 'solid', color = 'black') +
+  geom_point(color = 'dodgerblue3', size = 1) +
+  facet_wrap(~bay_segment, ncol = 4) +
+  geom_smooth(
+    method = 'lm',
+    se = T,
+    color = 'dodgerblue3'
+  ) +
+  labs(
+    subtitle = '(a) Salinity Effect',
+    x = NULL,
+    y = 'µg/L (+ is lower salinity)',
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+pb <- ggplot(toplo |> filter(var == 'ldeff'), aes(x = yr, y = val)) +
+  geom_hline(yintercept = 0, linetype = 'solid', color = 'black') +
+  geom_point(color = 'tomato1', size = 1) +
+  facet_wrap(~bay_segment, ncol = 4) +
+  geom_smooth(
+    method = 'lm',
+    se = T,
+    color = 'tomato1'
+  ) +
+  labs(
+    subtitle = '(b) Load Effect',
+    x = NULL,
+    y = 'µg/L (+ is higher load)',
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+p <- pa + pb + plot_layout(ncol = 1, guides = 'collect')
+
+png(here('figs/salvload.png'), width = 7, height = 6, units = 'in', res = 300)
+print(p)
+dev.off()
+
+# state space ------------------------------------------------------------
 
 toplo1 <- mods |>
   select(bay_segment, annsum) |>
@@ -344,7 +408,7 @@ p <- p1 +
   thm
 
 png(
-  here('figs/salvload.png'),
+  here('figs/statespace.png'),
   width = 7.5,
   height = 9.5,
   units = 'in',
