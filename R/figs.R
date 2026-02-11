@@ -289,7 +289,7 @@ p2 <- ggplot(toplo, aes(x = doydum, y = btfit, group = yr, color = yr)) +
     color = "Year",
     fill = NULL,
     y = 'µg/L',
-    title = '(b) Predicted Chl-a by Day of Year'
+    title = '(b) Predicted Chl-a by Month'
   )
 
 p <- p1 +
