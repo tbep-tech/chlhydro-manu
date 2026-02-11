@@ -131,16 +131,35 @@ fntfun <- function(x) {
   sizes[as.numeric(cut(x, breaks = 50))]
 }
 
-# Pre-calculate font sizes for each column
+# Pre-calculate colors across all columns
 cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+
+# Calculate colors for all values at once
+cell_colors <- colfun(unlist(totab[, cols])) |>
+  matrix(nrow = nrow(totab), ncol = length(cols)) |>
+  as.data.frame()
+names(cell_colors) <- cols
 
 gamcrtab <- totab |>
   flextable() |>
   set_header_labels(
     bay_segment = 'Bay Segment',
     yrcat = 'Year Group'
-  ) |>
-  color(j = ~ Annual + JFM + AMJ + JAS + OND, color = colfun)
+  )
+
+# Apply colors for each cell
+for (col in cols) {
+  color_col <- cell_colors[[col]]
+  for (i in seq_along(color_col)) {
+    gamcrtab <- color(
+      gamcrtab,
+      i = i,
+      j = col,
+      color = color_col[i],
+      part = 'body'
+    )
+  }
+}
 
 # Apply font sizes for each cell
 font_sizes <- fntfun(unlist(totab[, cols])) |>
@@ -195,14 +214,14 @@ datprp <- mods |>
 # mean absolute difference
 totabqrt <- datprp |>
   summarise(
-    salmad = mean(abs(btfit - btnorm), na.rm = T),
-    ldmad = mean(abs(btnorm - btnormmd), na.rm = T),
+    salmad = mean(btfit - btnorm, na.rm = T),
+    ldmad = mean(btnorm - btnormmd, na.rm = T),
     .by = c(bay_segment, yrcat, qrt)
   )
 totabann <- datprp |>
   summarise(
-    salmad = mean(abs(btfit - btnorm), na.rm = T),
-    ldmad = mean(abs(btnorm - btnormmd), na.rm = T),
+    salmad = mean(btfit - btnorm, na.rm = T),
+    ldmad = mean(btnorm - btnormmd, na.rm = T),
     .by = c(bay_segment, yrcat)
   ) |>
   mutate(
@@ -236,14 +255,22 @@ totab <- bind_rows(totabqrt, totabann) |>
     names_from = var,
     values_from = mad,
     names_sort = TRUE
+  ) |>
+  mutate(
+    bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
   )
 
+# Pre-calculate font sizes for each column
+cols <- c(paste0('sal_', levs), paste0('ld_', levs))
+
 # color function
-colfun <- function(x) {
-  x[is.na(x)] <- min(x, na.rm = T)
-  pal <- RColorBrewer::brewer.pal(9, 'Greys')[5:9]
-  colorRampPalette(pal)(100)[as.numeric(cut(x, breaks = 100))]
-}
+colfun <- leaflet::colorNumeric(
+  palette = c('blue', 'blue', 'dodgerblue3', 'grey', 'tomato1', 'red', 'red'),
+  domain = c(
+    -max(abs(totab[, cols]), na.rm = T),
+    max(abs(totab[, cols]), na.rm = T)
+  )
+)
 
 # font size function
 fntfun <- function(x) {
@@ -252,20 +279,32 @@ fntfun <- function(x) {
   sizes[as.numeric(cut(x, breaks = 50))]
 }
 
-# Pre-calculate font sizes for each column
-cols <- c(paste0('sal_', levs), paste0('ld_', levs))
-ft_data <- totab |>
-  mutate(
-    bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
-  )
+prdnrmtab <- totab |>
+  flextable()
 
-prdnrmtab <- ft_data |>
-  flextable() |>
-  color(j = cols, color = colfun)
+# Calculate colors for all values at once
+cell_colors <- colfun(unlist(totab[, cols])) |>
+  matrix(nrow = nrow(totab), ncol = length(cols)) |>
+  as.data.frame()
+names(cell_colors) <- cols
+
+# Apply colors for each cell
+for (col in cols) {
+  color_col <- cell_colors[[col]]
+  for (i in seq_along(color_col)) {
+    prdnrmtab <- color(
+      prdnrmtab,
+      i = i,
+      j = col,
+      color = color_col[i],
+      part = 'body'
+    )
+  }
+}
 
 # Apply font sizes for each cell
-font_sizes <- fntfun(unlist(ft_data[, cols])) |>
-  matrix(nrow = nrow(ft_data), ncol = length(cols)) |>
+font_sizes <- fntfun(abs(unlist(totab[, cols]))) |>
+  matrix(nrow = nrow(totab), ncol = length(cols)) |>
   as.data.frame()
 names(font_sizes) <- cols
 for (col in cols) {
