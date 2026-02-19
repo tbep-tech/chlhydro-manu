@@ -14,10 +14,20 @@ author:
       orcid: 0000-0002-4996-0059
       institute: [TBEP]
       correspondence: true
+  - Rebecca Murphy:
+      email: rmurphy@chesapeakebay.net
+      orcid: 0000-0003-3391-1823
+      institute: [CBP]
+      correspondence: false
   - Kerry Flaherty-Walia:
       email: kfwalia@tbep.org
       orcid: 0000-0002-6032-0570
       institute: [TBEP]
+      correspondence: false
+  - Qian Zhang:
+      email: qzhang@chesapeakebay.net
+      orcid: 0000-0003-0500-5655
+      institute: [CBP]
       correspondence: false
   - Blake A Simmons: 
       email: bsimmons@tbep.org
@@ -37,6 +47,7 @@ author:
 
 institute:
   - TBEP: Tampa Bay Estuary Program, 263 13th Ave S., Suite 350, St. Petersburg, Florida 33701 USA
+  - CBP: University of Maryland Center for Environmental Science/U.S. Environmental Protection Agency Chesapeake Bay Program, 1750 Forest Drive, Annapolis, Maryland 21401 USA
 
 filters: 
   - templates/scholarly-metadata.lua
@@ -279,7 +290,7 @@ This study evaluated the competing effects of nutrient loading and salinity on c
 
 ```{r}
 #| label: tbl-gamtab
-#| tbl-cap: "Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay (n = 480 for each).  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statistic (F), and p-value (p, bold < $\\alpha$ = 0.05). $s$() indicates a single spline smooth for the predictor and $ti$() indicates a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth); tn_load: total nitrogen load (tons/month). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+#| tbl-cap: "Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay (n = 480 for each).  Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.).  Summary statistics for the smoothers used in each model are also shown with the estimated degrees of freedom (edf), reference degrees of freedom (Ref.df), F-statistic (F), and p-value (p, bold < $\alpha$ = 0.05). $s$() indicates a single spline smooth for the predictor and $ti$() indicates a tensor product smoother interaction between two predictors.  dec_time: decimal time; doy: day of year; sal: salinity (ppth); tn_load: total nitrogen load (tons/month). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
 gamtab
 ```
 
