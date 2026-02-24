@@ -1,0 +1,82 @@
+---
+format: 
+  docx:
+    reference-doc: my_styles.docx
+    number-sections: true
+title: "*Supplement* Managing the unmanageable: Understanding the competing effects of salinity and nutrient loading on estuarine water quality"
+bibliography: refs.bib
+csl: estuaries-and-coasts.csl
+crossref: 
+  fig-title: Fig.
+author:
+  - Marcus W Beck:
+      email: mbeck@tbep.org
+      orcid: 0000-0002-4996-0059
+      institute: [TBEP]
+      correspondence: true
+  - Rebecca Murphy:
+      email: rmurphy@chesapeakebay.net
+      orcid: 0000-0003-3391-1823
+      institute: [CBP]
+      correspondence: false
+  - Kerry Flaherty-Walia:
+      email: kfwalia@tbep.org
+      orcid: 0000-0002-6032-0570
+      institute: [TBEP]
+      correspondence: false
+  - Qian Zhang:
+      email: qzhang@chesapeakebay.net
+      orcid: 0000-0003-0500-5655
+      institute: [CBP]
+      correspondence: false
+  - Blake A Simmons: 
+      email: bsimmons@tbep.org
+      orcid: 0000-0002-1918-3463
+      institute: [TBEP]
+      correspondence: false
+  - Maya C Burke:
+      email: mburke@tbep.org
+      orcid: 0000-0002-3847-6501      
+      institute: [TBEP]
+      correspondence: false 
+  - Edward T Sherwood:
+      email: esherwood@tbep.org
+      orcid: 0000-0001-5330-302X
+      institute: [TBEP]
+      correspondence: false
+
+institute:
+  - TBEP: Tampa Bay Estuary Program, 263 13th Ave S., Suite 350, St. Petersburg, Florida 33701 USA
+  - CBP: University of Maryland Center for Environmental Science/U.S. Environmental Protection Agency Chesapeake Bay Program, 1750 Forest Drive, Annapolis, Maryland 21401 USA
+
+filters: 
+  - templates/scholarly-metadata.lua
+  - templates/author-info-blocks.lua
+  
+execute: 
+  echo: false
+  warning: false
+  ft.keepnext: false
+  ft.align: left
+---
+
+```{r}
+#| results: hide
+library(knitr)
+library(here)
+library(flextable)
+
+load(file = here('tabs/suppgamtab.RData'))
+```
+
+{{< pagebreak >}}
+
+## Tables {.unnumbered}
+
+```{r}
+#| label: tbl-supgamtab
+#| tbl-cap: "Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay (n = 480 for each) and different total nitrogen loading lags. Each model uses the same structure but with different estimates for the loading predictors, where the loads were evaluated as cumulative sums for the current month up to a three month lag. Results for the overall model fit are shown with the Generalized Cross Validation (GCV) score and deviance explained (Dev. Expl.). OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+suppgamtab
+```
+
+

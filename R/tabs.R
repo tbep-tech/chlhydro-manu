@@ -472,3 +472,135 @@ liktab <- totab |>
   autofit()
 
 save(liktab, file = here('tabs/liktab.RData'))
+
+# supp tab lag comp ------------------------------------------------------
+
+# water quality
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load0 = tn_load,
+    tn_load1 = tn_load + lag1,
+    tn_load2 = tn_load + lag1 + lag2,
+    tn_load3 = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-tn_load, -lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  select(-tn_load) |>
+  left_join(lddatlag, by = c('bay_segment', 'date'))
+
+mods <- wqdat |>
+  filter(dec_time >= 1985) |>
+  pivot_longer(
+    cols = starts_with('tn_load'),
+    names_to = 'tn_load_lag',
+    values_to = 'tn_load'
+  ) |>
+  group_nest(bay_segment, tn_load_lag) |>
+  mutate(
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_load, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    ),
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          .by = c(yr)
+        )
+    )
+  )
+
+totab <- mods |>
+  select(bay_segment, tn_load_lag, mod) |>
+  mutate(
+    summ = purrr::map(mod, function(x) {
+      summmod <- summary(x)
+      GCV <- round(summmod$sp.criterion[[1]], 0)
+      devexpl <- round(summmod$dev.expl, 2)
+
+      out <- bind_cols(GCV = GCV, devexpl = devexpl) |>
+        rename(
+          `Dev. Expl.` = devexpl
+        )
+
+      return(out)
+    })
+  ) |>
+  select(-mod) |>
+  unnest('summ') |>
+  mutate(
+    bay_segment = ifelse(
+      duplicated(bay_segment),
+      '',
+      as.character(bay_segment)
+    ),
+    tn_load_lag = case_when(
+      tn_load_lag == 'tn_load0' ~ 'None',
+      tn_load_lag == 'tn_load1' ~ '1',
+      tn_load_lag == 'tn_load2' ~ '2',
+      tn_load_lag == 'tn_load3' ~ '3'
+    )
+  )
+
+suppgamtab <- totab |>
+  flextable() |>
+  set_header_labels(bay_segment = 'Bay Segment', tn_load_lag = 'TN Load Lag') |>
+  padding(padding = 0, part = 'all') |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  colformat_double(
+    j = 3,
+    big.mark = '',
+    digits = 0
+  ) |>
+  autofit() |>
+  hline(i = 4) |>
+  hline(i = 8) |>
+  hline(i = 12)
+
+save(suppgamtab, file = here('tabs/suppgamtab.RData'))
