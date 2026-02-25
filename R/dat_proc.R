@@ -21,7 +21,7 @@ wqdat <- epcdata |>
     Sal_Bottom_ppth
   ) |>
   mutate(
-    sal = Sal_Top_ppth, #mean(c(Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth), na.rm = T),
+    sal = mean(c(Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth), na.rm = T),
     .by = c(bay_segment, SampleTime)
   ) |>
   mutate(
@@ -267,6 +267,382 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
   geom_abline(slope = 1, intercept = 0, color = 'red') +
   facet_grid(bay_segment ~ mo, scales = 'free') +
   theme_minimal()
+
+# GAMs with load loads ---------------------------------------------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load0 = tn_load,
+    tn_load1 = tn_load + lag1,
+    tn_load2 = tn_load + lag1 + lag2,
+    tn_load3 = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-tn_load, -lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  select(-tn_load) |>
+  left_join(lddatlag, by = c('bay_segment', 'date'))
+
+modslag <- wqdat |>
+  filter(dec_time >= 1985) |>
+  pivot_longer(
+    cols = starts_with('tn_load'),
+    names_to = 'tn_load_lag',
+    values_to = 'tn_load'
+  ) |>
+  group_nest(bay_segment, tn_load_lag) |>
+  mutate(
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_load, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    ),
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          .by = c(yr)
+        )
+    )
+  )
+
+save(modslag, file = here('data/modslag.RData'))
+
+# GAMs with residual predictors and load lags ----------------------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load0 = tn_load,
+    tn_load1 = tn_load + lag1,
+    tn_load2 = tn_load + lag1 + lag2,
+    tn_load3 = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-tn_load, -lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  select(-tn_load) |>
+  left_join(lddatlag, by = c('bay_segment', 'date'))
+
+modsreslag <- wqdat |>
+  filter(dec_time >= 1985) |>
+  pivot_longer(
+    cols = starts_with('tn_load'),
+    names_to = 'tn_load_lag',
+    values_to = 'tn_load'
+  ) |>
+  group_nest(bay_segment, tn_load_lag) |>
+  mutate(
+    data = purrr::map(
+      data,
+      function(x) {
+        salmod <- gam(
+          sal ~ s(doy, bs = 'cc'),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$sal <- residuals(salmod)
+        tnmod <- gam(
+          tn_load ~ s(doy, bs = 'cc') + s(sal),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$tn_load <- residuals(tnmod)
+        x
+      }
+    ),
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_load, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    ),
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          .by = c(yr)
+        )
+    )
+  )
+
+save(modsreslag, file = here('data/modsreslag.RData'))
+
+# GAMs with load lags, K restrictions ------------------------------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load0 = tn_load,
+    tn_load1 = tn_load + lag1,
+    tn_load2 = tn_load + lag1 + lag2,
+    tn_load3 = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-tn_load, -lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  select(-tn_load) |>
+  left_join(lddatlag, by = c('bay_segment', 'date'))
+
+modslagk <- wqdat |>
+  filter(dec_time >= 1985) |>
+  pivot_longer(
+    cols = starts_with('tn_load'),
+    names_to = 'tn_load_lag',
+    values_to = 'tn_load'
+  ) |>
+  group_nest(bay_segment, tn_load_lag) |>
+  mutate(
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 13, bs = 'tp') +
+          s(doy, k = 12, bs = 'cc') +
+          s(sal, k = 27, bs = 'tp') +
+          s(tn_load, k = 27, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    ),
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          .by = c(yr)
+        )
+    )
+  )
+
+save(modslagk, file = here('data/modslagk.RData'))
+
+# GAMs with residual predictors and load lags, K restrictions ------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/lddat.RData'))
+
+lddatlag <- lddat |>
+  summarise(
+    tn_load = sum(tn_load),
+    .by = c(bay_segment, date)
+  ) |>
+  mutate(
+    lag1 = dplyr::lag(tn_load, n = 1),
+    lag2 = dplyr::lag(tn_load, n = 2),
+    lag3 = dplyr::lag(tn_load, n = 3),
+    .by = c(bay_segment)
+  ) |>
+  fill(
+    lag1,
+    lag2,
+    lag3,
+    .by = c(bay_segment),
+    .direction = 'up'
+  ) |>
+  mutate(
+    tn_load0 = tn_load,
+    tn_load1 = tn_load + lag1,
+    tn_load2 = tn_load + lag1 + lag2,
+    tn_load3 = tn_load + lag1 + lag2 + lag3
+  ) |>
+  select(-tn_load, -lag1, -lag2, -lag3)
+
+wqdat <- wqdat |>
+  select(-tn_load) |>
+  left_join(lddatlag, by = c('bay_segment', 'date'))
+
+modsreslagk <- wqdat |>
+  filter(dec_time >= 1985) |>
+  pivot_longer(
+    cols = starts_with('tn_load'),
+    names_to = 'tn_load_lag',
+    values_to = 'tn_load'
+  ) |>
+  group_nest(bay_segment, tn_load_lag) |>
+  mutate(
+    data = purrr::map(
+      data,
+      function(x) {
+        salmod <- gam(
+          sal ~ s(doy, bs = 'cc'),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$sal <- residuals(salmod)
+        tnmod <- gam(
+          tn_load ~ s(doy, bs = 'cc') + s(sal),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$tn_load <- residuals(tnmod)
+        x
+      }
+    ),
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 13, bs = 'tp') +
+          s(doy, k = 12, bs = 'cc') +
+          s(sal, k = 27, bs = 'tp') +
+          s(tn_load, k = 27, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    ),
+    prds = purrr::map2(data, mod, pred_fun),
+    annsum = purrr::map(
+      prds,
+      ~ data.frame(.x) |>
+        mutate(
+          yr = lubridate::year(date)
+        ) |>
+        summarise(
+          chla = mean(chla, na.rm = T),
+          btfit = mean(btfit, na.rm = T),
+          btnorm = mean(btnorm, na.rm = T),
+          btfitmd = mean(btfitmd, na.rm = T),
+          btnormmd = mean(btnormmd, na.rm = T),
+          .by = c(yr)
+        )
+    )
+  )
+
+save(modsreslagk, file = here('data/modsreslagk.RData'))
 
 # model simulations ------------------------------------------------------
 

@@ -475,89 +475,21 @@ save(liktab, file = here('tabs/liktab.RData'))
 
 # supp tab lag comp ------------------------------------------------------
 
-# water quality
-load(file = here('data/wqdat.RData'))
-load(file = here('data/lddat.RData'))
+# load model data
+load(file = here('data/modslag.RData'))
+load(file = here('data/modslagk.RData'))
+load(file = here('data/modsreslag.RData'))
+load(file = here('data/modsreslagk.RData'))
 
-lddatlag <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  ) |>
-  mutate(
-    lag1 = dplyr::lag(tn_load, n = 1),
-    lag2 = dplyr::lag(tn_load, n = 2),
-    lag3 = dplyr::lag(tn_load, n = 3),
-    .by = c(bay_segment)
-  ) |>
-  fill(
-    lag1,
-    lag2,
-    lag3,
-    .by = c(bay_segment),
-    .direction = 'up'
-  ) |>
-  mutate(
-    tn_load0 = tn_load,
-    tn_load1 = tn_load + lag1,
-    tn_load2 = tn_load + lag1 + lag2,
-    tn_load3 = tn_load + lag1 + lag2 + lag3
-  ) |>
-  select(-tn_load, -lag1, -lag2, -lag3)
-
-wqdat <- wqdat |>
-  select(-tn_load) |>
-  left_join(lddatlag, by = c('bay_segment', 'date'))
-
-mods <- wqdat |>
-  filter(dec_time >= 1985) |>
-  pivot_longer(
-    cols = starts_with('tn_load'),
-    names_to = 'tn_load_lag',
-    values_to = 'tn_load'
-  ) |>
-  group_nest(bay_segment, tn_load_lag) |>
-  mutate(
-    mod = purrr::map(
-      data,
-      ~ gam(
-        chla ~ s(dec_time, k = 40, bs = 'tp') +
-          s(doy, k = 10, bs = 'cc') +
-          s(sal, k = 10, bs = 'tp') +
-          s(tn_load, k = 10, bs = 'tp') +
-          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
-          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
-          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
-          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
-        data = .x,
-        knots = list(doy = c(0, 366)),
-        family = Gamma(link = 'log'),
-        na.action = na.exclude,
-        method = 'REML'
-      )
-    ),
-    prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
-  )
-
-totab <- mods |>
-  select(bay_segment, tn_load_lag, mod) |>
+totab <- list(
+  `No seasonal correction, flexible K` = modslag,
+  `No seasonal correction, fixed K` = modslagk,
+  `Seasonal correction, flexible K` = modsreslag,
+  `Seasonal correction, fixed K` = modsreslagk
+) |>
+  tibble::enframe() |>
+  unnest(value) |>
+  select(name, bay_segment, tn_load_lag, mod) |>
   mutate(
     summ = purrr::map(mod, function(x) {
       summmod <- summary(x)
@@ -574,6 +506,14 @@ totab <- mods |>
   ) |>
   select(-mod) |>
   unnest('summ') |>
+  pivot_longer(
+    names_to = 'metric',
+    values_to = 'value',
+    c(GCV, `Dev. Expl.`)
+  ) |>
+  pivot_wider(names_from = name, values_from = value) |>
+  select(metric, everything()) |>
+  arrange(desc(metric)) |>
   mutate(
     bay_segment = ifelse(
       duplicated(bay_segment),
@@ -585,22 +525,193 @@ totab <- mods |>
       tn_load_lag == 'tn_load1' ~ '1',
       tn_load_lag == 'tn_load2' ~ '2',
       tn_load_lag == 'tn_load3' ~ '3'
-    )
+    ),
+    .by = c(metric)
   )
 
 suppgamtab <- totab |>
+  as_grouped_data('metric') |>
   flextable() |>
-  set_header_labels(bay_segment = 'Bay Segment', tn_load_lag = 'TN Load Lag') |>
+  set_header_labels(
+    metric = 'Summary',
+    bay_segment = 'Bay Segment',
+    tn_load_lag = 'TN Load Lag',
+    `No seasonal correction, flexible K` = 'Flexible K',
+    `No seasonal correction, fixed K` = 'Fixed K',
+    `Seasonal correction, flexible K` = 'Flexible K',
+    `Seasonal correction, fixed K` = 'Fixed K'
+  ) |>
+  add_header_row(
+    values = c('', '', '', 'No Seasonal Correction', 'Seasonal Correction'),
+    colwidths = c(1, 1, 1, 2, 2)
+  ) |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
+  align(align = 'center', part = 'all', j = c(4:7)) |>
   colformat_double(
-    j = 3,
+    j = 4:7,
+    i = 2:17,
     big.mark = '',
     digits = 0
   ) |>
   autofit() |>
-  hline(i = 4) |>
-  hline(i = 8) |>
-  hline(i = 12)
+  hline(i = c(5, 9, 13, 17, 22, 26, 30))
 
 save(suppgamtab, file = here('tabs/suppgamtab.RData'))
+
+# supp concurvity --------------------------------------------------------
+
+# load model data
+load(file = here('data/modslag.RData'))
+load(file = here('data/modslagk.RData'))
+load(file = here('data/modsreslag.RData'))
+load(file = here('data/modsreslagk.RData'))
+
+totab <- list(
+  `No seasonal correction, flexible K` = modslag,
+  `No seasonal correction, fixed K` = modslagk,
+  `Seasonal correction, flexible K` = modsreslag,
+  `Seasonal correction, fixed K` = modsreslagk
+) |>
+  tibble::enframe() |>
+  unnest(value) |>
+  select(name, bay_segment, tn_load_lag, mod) |>
+  mutate(
+    summ = purrr::map(mod, function(x) {
+      nms <- cols <- c(
+        's(dec_time)',
+        # 's(doy)',
+        's(sal)',
+        's(tn_load)'
+      )
+      mat <- concurvity(x)[3, nms] |>
+        data.frame() |>
+        t() |>
+        data.frame()
+      names(mat) <- nms
+      row.names(mat) <- 1
+      return(mat)
+    })
+  ) |>
+  select(-mod) |>
+  unnest('summ') |>
+  mutate(
+    tn_load_lag = case_when(
+      tn_load_lag == 'tn_load0' ~ 'None',
+      tn_load_lag == 'tn_load1' ~ '1',
+      tn_load_lag == 'tn_load2' ~ '2',
+      tn_load_lag == 'tn_load3' ~ '3'
+    )
+  )
+
+tabfun <- function(x, bayseg) {
+  totab <- x |>
+    filter(bay_segment == bayseg) |>
+    select(-bay_segment) |>
+    separate(name, into = c('season', 'k'), sep = ', ') |>
+    mutate(
+      k = case_when(
+        k == 'flexible K' ~ 'Flexible',
+        k == 'fixed K' ~ 'Fixed',
+      ),
+      season = case_when(
+        season == 'No seasonal correction' ~ 'No',
+        season == 'Seasonal correction' ~ 'Yes'
+      )
+    ) |>
+    mutate(
+      k = ifelse(duplicated(k), '', k),
+      .by = season
+    ) |>
+    mutate(
+      season = ifelse(duplicated(season), '', season)
+    )
+
+  # color function
+  colfun <- function(x) {
+    x[is.na(x)] <- min(x, na.rm = T)
+    pal <- RColorBrewer::brewer.pal(9, 'Greys')[5:9]
+    colorRampPalette(pal)(100)[as.numeric(cut(x, breaks = 100))]
+  }
+
+  # font size function
+  fntfun <- function(x) {
+    x[is.na(x)] <- min(x, na.rm = T)
+    sizes <- seq(7, 11, length.out = 50)
+    sizes[as.numeric(cut(x, breaks = 50))]
+  }
+
+  # Pre-calculate colors across all columns
+  cols <- c('s(dec_time)', 's(sal)', 's(tn_load)')
+
+  # Calculate colors for all values at once
+  cell_colors <- colfun(unlist(totab[, cols])) |>
+    matrix(nrow = nrow(totab), ncol = length(cols)) |>
+    as.data.frame()
+  names(cell_colors) <- cols
+
+  tab <- totab |>
+    flextable() |>
+    set_header_labels(
+      k = 'K',
+      season = 'Seasonal\nCorrection',
+      tn_load_lag = 'TN Load Lag'
+    )
+
+  # Apply colors for each cell
+  for (col in cols) {
+    color_col <- cell_colors[[col]]
+    for (i in seq_along(color_col)) {
+      tab <- color(
+        tab,
+        i = i,
+        j = col,
+        color = color_col[i],
+        part = 'body'
+      )
+    }
+  }
+
+  # Apply font sizes for each cell
+  font_sizes <- fntfun(unlist(totab[, cols])) |>
+    matrix(nrow = nrow(totab), ncol = length(cols)) |>
+    as.data.frame()
+  names(font_sizes) <- cols
+  for (col in cols) {
+    font_col <- font_sizes[[col]]
+    for (i in seq_along(font_col)) {
+      tab <- fontsize(
+        tab,
+        i = i,
+        j = col,
+        size = font_col[i],
+        part = 'body'
+      )
+    }
+  }
+
+  out <- tab |>
+    padding(padding = 0, part = 'all') |>
+    bold(j = cols, part = 'body') |>
+    align(align = 'center', part = 'all', j = cols) |>
+    font(part = 'all', fontname = 'Times New Roman') |>
+    colformat_double(
+      digits = 2
+    ) |>
+    hline(i = 4, j = 2:6) |>
+    hline(i = 8) |>
+    hline(i = 12, j = 2:6) |>
+    autofit()
+
+  return(out)
+}
+
+suppconcurvotbtab <- tabfun(totab, 'OTB')
+suppconcurvhbtab <- tabfun(totab, 'HB')
+suppconcurvmtbtab <- tabfun(totab, 'MTB')
+suppconcurvltbtab <- tabfun(totab, 'LTB')
+
+save(suppconcurvotbtab, file = here('tabs/suppconcurvotbtab.RData'))
+save(suppconcurvhbtab, file = here('tabs/suppconcurvhbtab.RData'))
+save(suppconcurvmtbtab, file = here('tabs/suppconcurvmtbtab.RData'))
+save(suppconcurvltbtab, file = here('tabs/suppconcurvltbtab.RData'))
