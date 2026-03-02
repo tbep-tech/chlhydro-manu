@@ -15,10 +15,16 @@ load(file = here('data/wqdat.RData'))
 
 # map --------------------------------------------------------------------
 
+data("tbseg", package = "tbeptools")
+data("tbseglines", package = "tbeptools")
+
 flpoly <- map_data('state', 'florida') %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326) %>%
   summarise(geometry = st_combine(geometry)) %>%
   st_cast("POLYGON")
+
+chnls <- st_read(here('data/data-raw/Dredge_channels.shp')) %>%
+  st_transform(4326)
 
 bbox <- st_bbox(tbseg)
 
@@ -52,6 +58,13 @@ m <- ggplot() +
     zoom = 11,
     type = 'cartolight',
     cachedir = system.file("rosm.cache", package = "ggspatial")
+  ) +
+  geom_sf(
+    data = chnls,
+    color = 'tomato1',
+    fill = 'tomato1',
+    alpha = 1,
+    inherit.aes = F
   ) +
   geom_sf(data = epcpts, color = 'black', inherit.aes = F) +
   annotation_north_arrow(
