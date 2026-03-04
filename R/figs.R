@@ -578,8 +578,8 @@ p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   facet_wrap(~bay_segment, scales = 'free') +
   labs(
     color = "Year",
-    x = 'Salinity Effect µg/L (+ is lower salinity)',
-    y = 'Load Effect µg/L (+ is higher load)',
+    x = 'Salinity Effect (µg/L)',
+    y = 'Load Effect (µg/L)',
     subtitle = '(a) By Year'
   )
 
@@ -633,8 +633,8 @@ p2 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   facet_wrap(~bay_segment, scales = 'free') +
   labs(
     color = "Year",
-    x = 'Salinity Effect µg/L (+ is lower salinity)',
-    y = 'Load Effect µg/L (+ is higher load)',
+    x = 'Salinity Effect (µg/L)',
+    y = 'Load Effect (µg/L)',
     subtitle = '(b) Means (+/- 95% Confidence) by Year Group'
   )
 
