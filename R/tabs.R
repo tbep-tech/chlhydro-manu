@@ -79,17 +79,16 @@ datprp <- mods |>
       yr >= 2000 & yr < 2015 ~ '2000 - 2014',
       yr >= 2015 ~ '2015 - 2024'
     ),
-    qrt = factor(
-      lubridate::quarter(date),
-      levels = 1:4,
-      labels = c('JFM', 'AMJ', 'JAS', 'OND')
+    seas = factor(
+      ifelse(lubridate::month(date) %in% 6:9, 'Wet', 'Dry'),
+      levels = c('Wet', 'Dry')
     )
   )
 
-totabqrt <- datprp |>
+totabseas <- datprp |>
   summarise(
     cr = cor(chla, btfit, use = 'complete.obs'), #summary(lm(btfit ~ chla))$r.squared,
-    .by = c(bay_segment, yrcat, qrt)
+    .by = c(bay_segment, yrcat, seas)
   )
 totabann <- datprp |>
   summarise(
@@ -97,22 +96,22 @@ totabann <- datprp |>
     .by = c(bay_segment, yrcat)
   ) |>
   mutate(
-    qrt = 'Annual'
+    seas = 'Annual'
   )
 
-totab <- bind_rows(totabqrt, totabann) |>
+totab <- bind_rows(totabseas, totabann) |>
   mutate(
-    qrt = factor(
-      qrt,
-      levels = c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+    seas = factor(
+      seas,
+      levels = c('Annual', 'Wet', 'Dry')
     ),
     cr = round(cr, 2)
   ) |>
   pivot_wider(
-    names_from = qrt,
+    names_from = seas,
     values_from = cr
   ) |>
-  select(bay_segment, yrcat, Annual, JFM, AMJ, JAS, OND) |>
+  select(bay_segment, yrcat, Annual, Wet, Dry) |>
   mutate(
     bay_segment = ifelse(duplicated(bay_segment), '', as.character(bay_segment))
   )
@@ -132,7 +131,7 @@ fntfun <- function(x) {
 }
 
 # Pre-calculate colors across all columns
-cols <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
+cols <- c('Annual', 'Wet', 'Dry')
 
 # Calculate colors for all values at once
 cell_colors <- colfun(unlist(totab[, cols])) |>
@@ -204,19 +203,18 @@ datprp <- mods |>
       yr >= 2000 & yr < 2015 ~ '2000 - 2014',
       yr >= 2015 ~ '2015 - 2024'
     ),
-    qrt = factor(
-      lubridate::quarter(date),
-      levels = 1:4,
-      labels = c('JFM', 'AMJ', 'JAS', 'OND')
+    seas = factor(
+      ifelse(lubridate::month(date) %in% 6:9, 'Wet', 'Dry'),
+      levels = c('Wet', 'Dry')
     )
   )
 
 # mean absolute difference
-totabqrt <- datprp |>
+totabseas <- datprp |>
   summarise(
     salmad = mean(btfit - btnorm, na.rm = T),
     ldmad = mean(btnorm - btnormmd, na.rm = T),
-    .by = c(bay_segment, yrcat, qrt)
+    .by = c(bay_segment, yrcat, seas)
   )
 totabann <- datprp |>
   summarise(
@@ -225,14 +223,14 @@ totabann <- datprp |>
     .by = c(bay_segment, yrcat)
   ) |>
   mutate(
-    qrt = 'Annual'
+    seas = 'Annual'
   )
 
-levs <- c('Annual', 'JFM', 'AMJ', 'JAS', 'OND')
-totab <- bind_rows(totabqrt, totabann) |>
+levs <- c('Annual', 'Wet', 'Dry')
+totab <- bind_rows(totabseas, totabann) |>
   mutate(
-    qrt = factor(
-      qrt,
+    seas = factor(
+      seas,
       levels = levs
     ),
     salmad = round(salmad, 2),
@@ -245,9 +243,9 @@ totab <- bind_rows(totabqrt, totabann) |>
   ) |>
   mutate(
     var = gsub('mad$', '', var),
-    qrt = as.character(qrt)
+    seas = as.character(seas)
   ) |>
-  unite('var', var, qrt) |>
+  unite('var', var, seas) |>
   mutate(
     var = factor(var, levels = c(paste0('sal_', levs), paste0('ld_', levs)))
   ) |>
@@ -327,16 +325,16 @@ prdnrmtab <- prdnrmtab |>
   align(align = 'left', part = 'header', j = cols, i = 1) |>
   font(part = 'all', fontname = 'Times New Roman') |>
   add_header_row(
-    values = c('', '', rep('Salinity', 5), rep('Load', 5))
+    values = c('', '', rep('Salinity', 3), rep('Load', 3))
   ) |>
-  merge_at(i = 1, j = c(3:7), part = 'header') |>
-  merge_at(i = 1, j = c(8:12), part = 'header') |>
+  merge_at(i = 1, j = c(3:5), part = 'header') |>
+  merge_at(i = 1, j = c(6:8), part = 'header') |>
   set_header_labels(
     i = 2,
     values = c(
       'Bay Segment',
       'Year Group',
-      rep(c('Annual', 'JFM', 'AMJ', 'JJA', 'OND'), 2)
+      rep(c('Annual', 'Wet', 'Dry'), 2)
     )
   ) |>
   hline(i = 3) |>
