@@ -710,22 +710,22 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
       dec_time = decimal_date(date)
     )
 
-  # add doy correction to salinity
-  salrates <- salrates |>
-    group_nest(bay_segment, yrs) |>
-    mutate(
-      data = purrr::map(data, function(x) {
-        salmod <- gam(
-          salforeyrmo ~ s(doy, bs = 'cc'),
-          data = x,
-          method = 'REML',
-          knots = list(doy = c(0, 366))
-        )
-        x$salforeyrmo <- residuals(salmod)
-        return(x)
-      })
-    ) |>
-    unnest('data')
+  # # add doy correction to salinity - skipped
+  # salrates <- salrates |>
+  #   group_nest(bay_segment, yrs) |>
+  #   mutate(
+  #     data = purrr::map(data, function(x) {
+  #       salmod <- gam(
+  #         salforeyrmo ~ s(doy, bs = 'cc'),
+  #         data = x,
+  #         method = 'REML',
+  #         knots = list(doy = c(0, 366))
+  #       )
+  #       x$salforeyrmo <- residuals(salmod)
+  #       return(x)
+  #     })
+  #   ) |>
+  #   unnest('data')
 
   # get load scaling specific to yrs
   ldscale <- tibble(
@@ -737,39 +737,39 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
         ~ ldscale_fun(
           lddat,
           ldfac = c(0.5, 1, 2),
-          yrs = c(seq(yrs[1] - 5, max(yrs))),
+          yrs = yrs,
           bay_segment = .x
         )
       )
     ) |>
     unnest('ldscale')
 
-  # add lagged loadings
-  ldlag <- ldscale |>
-    group_nest(ldfac) |>
-    mutate(
-      data = purrr::map(data, function(x) {
-        lddatlag_fun(x)
-      })
-    ) |>
-    unnest('data') |>
-    select(ldfac, bay_segment, date, tn_load3)
+  # # add lagged loadings - skip
+  # ldlag <- ldscale |>
+  #   group_nest(ldfac) |>
+  #   mutate(
+  #     data = purrr::map(data, function(x) {
+  #       lddatlag_fun(x)
+  #     })
+  #   ) |>
+  #   unnest('data') |>
+  #   select(ldfac, bay_segment, date, tn_load3)
 
-  # get year range and correct lag
-  ldscale <- ldscale |>
-    left_join(
-      ldlag,
-      by = c('bay_segment', 'date', 'ldfac'),
-      relationship = 'many-to-many'
-    ) |>
-    filter(yr %in% yrs) |>
-    mutate(
-      tn_load = tn_load3,
-      .keep = 'unused'
-    )
+  # # get year range and correct lag - skip
+  # ldscale <- ldscale |>
+  #   left_join(
+  #     ldlag,
+  #     by = c('bay_segment', 'date', 'ldfac'),
+  #     relationship = 'many-to-many'
+  #   ) |>
+  #   filter(yr %in% yrs) |>
+  #   mutate(
+  #     tn_load = tn_load3,
+  #     .keep = 'unused'
+  #   )
 
   # join salinity projections with load scenarios
-  # correct load for salinity and doy
+  # correct load for salinity and doy - skipped
   out <- salrates |>
     arrange(bay_segment, yrs, date) |>
     left_join(
@@ -779,29 +779,33 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
     ) |>
     select(-sal) |>
     rename(sal = salforeyrmo) |>
-    group_nest(bay_segment, yrs, ldfac) |>
-    mutate(
-      data = purrr::map(data, function(x) {
-        tnmod <- gam(
-          tn_load ~ s(doy, bs = 'cc') + s(sal),
-          data = x,
-          method = 'REML',
-          knots = list(doy = c(0, 366))
-        )
-        x$tn_load <- residuals(tnmod)
-        x
-      })
-    ) |>
-    unnest(data) |>
+    # group_nest(bay_segment, yrs, ldfac) |>
+    # mutate(
+    #   data = purrr::map(data, function(x) {
+    #     tnmod <- gam(
+    #       tn_load ~ s(doy, bs = 'cc') + s(sal),
+    #       data = x,
+    #       method = 'REML',
+    #       knots = list(doy = c(0, 366))
+    #     )
+    #     x$tn_load <- residuals(tnmod)
+    #     x
+    #   })
+    # ) |>
+    # unnest(data) |>
     arrange(bay_segment, ldfac, yrs, date)
 
   return(out)
 }
 
 # simulation predictions for scenarios
-simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
+simprd_fun <- function(modin, simdat, nsims = 100, chunk = T, all = F) {
+  # modin <- modin |>
+  #   filter(tn_load_lag == 'tn_load3') |>
+  #   select(-tn_load_lag)
+
   trgs <- tbeptools::targets |>
-    filter(bay_segment %in% mods$bay_segment) |>
+    filter(bay_segment %in% modin$bay_segment) |>
     dplyr::select(bay_segment, thresh = chla_thresh) |>
     mutate(
       bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
@@ -813,7 +817,7 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
     rename(tst = data) |>
     left_join(trgs, by = c('bay_segment'), relationship = 'one-to-one')
 
-  out <- mods |>
+  out <- modin |>
     left_join(tojn, by = c('bay_segment'), relationship = 'one-to-one')
 
   if (chunk) {
@@ -823,8 +827,8 @@ simprd_fun <- function(mods, simdat, nsims = 100, chunk = T, all = F) {
           list(mod, tst, bay_segment),
           function(mod, tst, bay_segment) {
             out <- NULL
-            simi <- nsims / 100
-            reps <- rep(simi, 100)
+            simi <- nsims / 10
+            reps <- rep(simi, 10)
             # chunking needs to be done to avoid memory issues
             for (i in seq_along(reps)) {
               cat(bay_segment, i, 'of', length(reps), '\n')

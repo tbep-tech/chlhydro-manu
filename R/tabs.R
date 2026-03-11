@@ -75,9 +75,9 @@ datprp <- mods |>
   mutate(
     yr = lubridate::year(date),
     yrcat = case_when(
-      yr < 2000 ~ '1985 - 1999',
-      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
-      yr >= 2015 ~ '2015 - 2024'
+      yr < 1999 ~ '1985 - 1998',
+      yr >= 1999 & yr < 2012 ~ '1999 - 2011',
+      yr >= 2012 ~ '2012 - 2024'
     ),
     seas = factor(
       ifelse(lubridate::month(date) %in% 6:9, 'Wet', 'Dry'),
@@ -199,9 +199,9 @@ datprp <- mods |>
   mutate(
     yr = lubridate::year(date),
     yrcat = case_when(
-      yr < 2000 ~ '1985 - 1999',
-      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
-      yr >= 2015 ~ '2015 - 2024'
+      yr < 1999 ~ '1985 - 1998',
+      yr >= 1999 & yr < 2012 ~ '1999 - 2011',
+      yr >= 2012 ~ '2012 - 2024'
     ),
     seas = factor(
       ifelse(lubridate::month(date) %in% 6:9, 'Wet', 'Dry'),
@@ -346,9 +346,9 @@ save(prdnrmtab, file = here('tabs/prdnrmtab.RData'))
 
 # simulation summaries ---------------------------------------------------
 
-load(file = here('data/simprddat1524.RData'))
+load(file = here('data/simprddat.RData'))
 
-salests <- simprddat1524 |>
+salests <- simprddat |>
   select(bay_segment, tst) |>
   unnest(tst) |>
   filter(yrs %in% c(25, 50)) |>
@@ -359,7 +359,7 @@ salests <- simprddat1524 |>
   )
 
 rho <- 0.7
-totab <- simprddat1524 |>
+totab <- simprddat |>
   select(bay_segment, exceedssum) |>
   unnest(exceedssum) |>
   filter(yrs %in% c(1, 25, 50)) |>
@@ -578,9 +578,15 @@ totab <- list(
     summ = purrr::map(mod, function(x) {
       nms <- cols <- c(
         's(dec_time)',
-        # 's(doy)',
+        's(doy)',
         's(sal)',
-        's(tn_load)'
+        's(tn_load)',
+        'ti(dec_time,doy)',
+        'ti(dec_time,sal)',
+        'ti(sal,doy)',
+        'ti(dec_time,tn_load)',
+        'ti(tn_load,doy)',
+        'ti(tn_load,sal)'
       )
       mat <- concurvity(x)[3, nms] |>
         data.frame() |>
@@ -635,12 +641,23 @@ tabfun <- function(x, bayseg) {
   # font size function
   fntfun <- function(x) {
     x[is.na(x)] <- min(x, na.rm = T)
-    sizes <- seq(7, 11, length.out = 50)
+    sizes <- seq(7, 9, length.out = 50)
     sizes[as.numeric(cut(x, breaks = 50))]
   }
 
   # Pre-calculate colors across all columns
-  cols <- c('s(dec_time)', 's(sal)', 's(tn_load)')
+  cols <- c(
+    's(dec_time)',
+    's(doy)',
+    's(sal)',
+    's(tn_load)',
+    'ti(dec_time,doy)',
+    'ti(dec_time,sal)',
+    'ti(sal,doy)',
+    'ti(dec_time,tn_load)',
+    'ti(tn_load,doy)',
+    'ti(tn_load,sal)'
+  )
 
   # Calculate colors for all values at once
   cell_colors <- colfun(unlist(totab[, cols])) |>
@@ -693,13 +710,16 @@ tabfun <- function(x, bayseg) {
     bold(j = cols, part = 'body') |>
     align(align = 'center', part = 'all', j = cols) |>
     font(part = 'all', fontname = 'Times New Roman') |>
+    fontsize(size = 9, part = 'header') |>
+    fontsize(size = 9, part = 'body', j = 1:3) |>
     colformat_double(
       digits = 2
     ) |>
-    hline(i = 4, j = 2:6) |>
+    hline(i = 4, j = 2:13) |>
     hline(i = 8) |>
-    hline(i = 12, j = 2:6) |>
-    autofit()
+    hline(i = 12, j = 2:13) |>
+    width(j = 4:13, width = 0.5) |>
+    width(j = 1:3, width = 0.5)
 
   return(out)
 }

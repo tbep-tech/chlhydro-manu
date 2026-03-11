@@ -536,10 +536,11 @@ toplo1 <- mods |>
     saleff = btfit - btnorm,
     ldeff = btnorm - btnormmd,
     yrgrp = case_when(
-      yr < 2000 ~ '1985 - 1999',
-      yr >= 2000 & yr < 2015 ~ '2000 - 2014',
-      yr >= 2015 ~ '2015 - 2024'
-    )
+      yr < 1999 ~ '1985 - 1998',
+      yr >= 1999 & yr < 2012 ~ '1999 - 2011',
+      yr >= 2012 ~ '2012 - 2024'
+    ),
+    yr = substr(yr, 3, 4)
   )
 
 toplo2 <- toplo1 |>
@@ -568,10 +569,9 @@ p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   geom_text_repel(
     aes(label = yr, color = yrgrp),
     size = 2,
-    max.overlaps = 20
+    max.overlaps = 30
   ) +
   scale_color_viridis_d(option = "D", end = 0.8) +
-  # scale_fill_viridis_d(option = "D", end = 0.8) +
   # coord_equal() +
   scale_y_continuous(expand = c(0.1, 0.1)) +
   scale_x_continuous(expand = c(0.1, 0.1)) +
@@ -622,11 +622,6 @@ p2 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
     lineend = 'square',
     width = 0
   ) +
-  geom_text_repel(
-    aes(label = yr),
-    alpha = 0,
-    max.overlaps = 20
-  ) +
   scale_color_viridis_d(option = "D", end = 0.8) +
   scale_y_continuous(expand = c(0.1, 0.1)) +
   scale_x_continuous(expand = c(0.1, 0.1)) +
@@ -656,12 +651,12 @@ dev.off()
 # sim example for obs conditions -----------------------------------------
 
 load(file = here('data/mods.RData'))
-load(file = here('data/simdat1524.RData'))
+load(file = here('data/simdat.RData'))
 
 act <- mods |>
   filter(bay_segment == 'OTB') |>
   unnest('data') |>
-  filter(date >= as.Date('2015-01-01') & date <= as.Date('2024-12-31')) |>
+  filter(date >= min(simdat$date) & date <= max(simdat$date)) |>
   select(date, tn_load, sal, dec_time, doy, chla) |>
   mutate(
     yr = year(date)
@@ -671,7 +666,8 @@ act <- mods |>
     .by = yr
   )
 
-toplo1 <- simprd_fun(mods, simdat1524, nsims = 100, chunk = F, all = T) |>
+toplo1 <- mods |>
+  simprd_fun(simdat, nsims = 100, chunk = F, all = T) |>
   filter(bay_segment == 'OTB') |>
   select(-data, -mod, -prds, -annsum, -tst, -exceedsyr, -exceedssum) |>
   unnest('simsyr') |>
@@ -704,7 +700,7 @@ p1 <- ggplot(toplo1, aes(x = yr, y = chla_sim)) +
     )
   ) +
   facet_grid(ldfac ~ yrs) +
-  scale_x_continuous(breaks = seq(2015, 2024, by = 2)) +
+  scale_x_continuous(breaks = seq(2012, 2024, by = 2)) +
   theme_minimal() +
   theme(
     panel.grid.minor = element_blank(),
@@ -718,9 +714,9 @@ p1 <- ggplot(toplo1, aes(x = yr, y = chla_sim)) +
     subtitle = '(a) Simulations Subset Years 1 and 50\n'
   )
 
-load(file = here('data/simprddat1524.RData'))
+load(file = here('data/simprddat.RData'))
 
-toplo2 <- simprddat1524 |>
+toplo2 <- simprddat |>
   filter(bay_segment == 'OTB') |>
   select(bay_segment, exceedssum) |>
   unnest('exceedssum')
@@ -767,9 +763,9 @@ dev.off()
 
 # simloads ---------------------------------------------------------------
 
-load(file = 'data/simprddat1524.RData')
+load(file = 'data/simprddat.RData')
 
-toplo <- simprddat1524 |>
+toplo <- simprddat |>
   filter(bay_segment == 'OTB') |>
   select(bay_segment, exceedssum) |>
   unnest('exceedssum') |>

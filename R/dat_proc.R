@@ -436,7 +436,7 @@ save(modsreslagk, file = here('data/modsreslagk.RData'))
 
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
-load(file = here('data/modsreslagk.RData'))
+load(file = here('data/mods.RData'))
 
 simdat <- simprp_fun(wqdat, lddat, yrs = c(2012:2024))
 
@@ -473,5 +473,5 @@ save(simdat, file = here('data/simdat.RData'))
 #     color = "Load scenario"
 #   )
 
-simprddat <- simprd_fun(modsreslagk, simdat, nsims = 100)
+simprddat <- simprd_fun(mods, simdat, nsims = 100, chunk = T)
 save(simprddat, file = here('data/simprddat.RData'))

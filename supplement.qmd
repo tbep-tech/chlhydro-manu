@@ -87,7 +87,7 @@ suppgamtab
 
 ```{r}
 #| label: tbl-supconcurvotbtab
-#| tbl-cap: "Concurvity estimates for the __Old Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Values are shown for only the smooth functions of time (dec_time), salinity (sal), and total nitrogen loading (tn_load). The smooth function for day of year and tensor product smooths are omitted and had values all less than those shown. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
+#| tbl-cap: "Concurvity estimates for the __Old Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors.  Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvotbtab
 ```
 
@@ -95,7 +95,7 @@ suppconcurvotbtab
 
 ```{r}
 #| label: tbl-supconcurvhbtab
-#| tbl-cap: "Concurvity estimates for the __Hillsborough Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Values are shown for only the smooth functions of time (dec_time), salinity (sal), and total nitrogen loading (tn_load). The smooth function for day of year and tensor product smooths are omitted and had values all less than those shown. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
+#| tbl-cap: "Concurvity estimates for the __Hillsborough Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvhbtab
 ```
 
@@ -103,7 +103,7 @@ suppconcurvhbtab
 
 ```{r}
 #| label: tbl-supconcurvmtbtab
-#| tbl-cap: "Concurvity estimates for the __Middle Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Values are shown for only the smooth functions of time (dec_time), salinity (sal), and total nitrogen loading (tn_load). The smooth function for day of year and tensor product smooths are omitted and had values all less than those shown. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
+#| tbl-cap: "Concurvity estimates for the __Middle Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvmtbtab
 ```
 
@@ -111,6 +111,6 @@ suppconcurvmtbtab
 
 ```{r}
 #| label: tbl-supconcurvltbtab
-#| tbl-cap: "Concurvity estimates for the __Lower Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Values are shown for only the smooth functions of time (dec_time), salinity (sal), and total nitrogen loading (tn_load). The smooth function for day of year and tensor product smooths are omitted and had values all less than those shown. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
+#| tbl-cap: "Concurvity estimates for the __Lower Tampa Bay__ Generalized Additive Models.  Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvltbtab
 ```
