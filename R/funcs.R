@@ -710,6 +710,23 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
       dec_time = decimal_date(date)
     )
 
+  # add doy correction to salinity
+  salrates <- salrates |>
+    group_nest(bay_segment, yrs) |>
+    mutate(
+      data = purrr::map(data, function(x) {
+        salmod <- gam(
+          salforeyrmo ~ s(doy, bs = 'cc'),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$salforeyrmo <- residuals(salmod)
+        return(x)
+      })
+    ) |>
+    unnest('data')
+
   # get load scaling specific to yrs
   ldscale <- tibble(
     bay_segment = c('OTB', 'HB', 'MTB', 'LTB')
@@ -717,12 +734,42 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
     mutate(
       ldscale = purrr::map(
         bay_segment,
-        ~ ldscale_fun(lddat, ldfac = c(0.5, 1, 2), yrs = yrs, bay_segment = .x)
+        ~ ldscale_fun(
+          lddat,
+          ldfac = c(0.5, 1, 2),
+          yrs = c(seq(yrs[1] - 5, max(yrs))),
+          bay_segment = .x
+        )
       )
     ) |>
     unnest('ldscale')
 
+  # add lagged loadings
+  ldlag <- ldscale |>
+    group_nest(ldfac) |>
+    mutate(
+      data = purrr::map(data, function(x) {
+        lddatlag_fun(x)
+      })
+    ) |>
+    unnest('data') |>
+    select(ldfac, bay_segment, date, tn_load3)
+
+  # get year range and correct lag
+  ldscale <- ldscale |>
+    left_join(
+      ldlag,
+      by = c('bay_segment', 'date', 'ldfac'),
+      relationship = 'many-to-many'
+    ) |>
+    filter(yr %in% yrs) |>
+    mutate(
+      tn_load = tn_load3,
+      .keep = 'unused'
+    )
+
   # join salinity projections with load scenarios
+  # correct load for salinity and doy
   out <- salrates |>
     arrange(bay_segment, yrs, date) |>
     left_join(
@@ -731,7 +778,22 @@ simprp_fun <- function(wqdat, lddat, yrs = c(2017:2021)) {
       relationship = 'many-to-many'
     ) |>
     select(-sal) |>
-    rename(sal = salforeyrmo)
+    rename(sal = salforeyrmo) |>
+    group_nest(bay_segment, yrs, ldfac) |>
+    mutate(
+      data = purrr::map(data, function(x) {
+        tnmod <- gam(
+          tn_load ~ s(doy, bs = 'cc') + s(sal),
+          data = x,
+          method = 'REML',
+          knots = list(doy = c(0, 366))
+        )
+        x$tn_load <- residuals(tnmod)
+        x
+      })
+    ) |>
+    unnest(data) |>
+    arrange(bay_segment, ldfac, yrs, date)
 
   return(out)
 }

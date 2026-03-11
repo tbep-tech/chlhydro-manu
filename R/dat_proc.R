@@ -192,21 +192,7 @@ mods <- wqdat |>
       )
     ),
     prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
+    annsum = purrr::map(prds, annsum_fun)
   )
 
 save(mods, file = here('data/mods.RData'))
@@ -268,49 +254,12 @@ ggplot(toplo, aes(x = chla, y = btfit)) +
   facet_grid(bay_segment ~ mo, scales = 'free') +
   theme_minimal()
 
-# GAMs with load loads ---------------------------------------------------
+# GAMs with lag loads ----------------------------------------------------
 
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
 
-lddatlag <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  ) |>
-  mutate(
-    lag1 = dplyr::lag(tn_load, n = 1),
-    lag2 = dplyr::lag(tn_load, n = 2),
-    lag3 = dplyr::lag(tn_load, n = 3),
-    .by = c(bay_segment)
-  ) |>
-  fill(
-    lag1,
-    lag2,
-    lag3,
-    .by = c(bay_segment),
-    .direction = 'up'
-  ) |>
-  mutate(
-    tn_load0 = tn_load,
-    tn_load1 = tn_load + lag1,
-    tn_load2 = tn_load + lag1 + lag2,
-    tn_load3 = tn_load + lag1 + lag2 + lag3
-  ) |>
-  select(-tn_load, -lag1, -lag2, -lag3)
-
-wqdat <- wqdat |>
-  select(-tn_load) |>
-  left_join(lddatlag, by = c('bay_segment', 'date'))
-
-modslag <- wqdat |>
-  filter(dec_time >= 1985) |>
-  pivot_longer(
-    cols = starts_with('tn_load'),
-    names_to = 'tn_load_lag',
-    values_to = 'tn_load'
-  ) |>
-  group_nest(bay_segment, tn_load_lag) |>
+modslag <- modprep_fun(wqdat, lddat) |>
   mutate(
     mod = purrr::map(
       data,
@@ -333,21 +282,7 @@ modslag <- wqdat |>
       )
     ),
     prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
+    annsum = purrr::map(prds, annsum_fun)
   )
 
 save(modslag, file = here('data/modslag.RData'))
@@ -357,44 +292,7 @@ save(modslag, file = here('data/modslag.RData'))
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
 
-lddatlag <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  ) |>
-  mutate(
-    lag1 = dplyr::lag(tn_load, n = 1),
-    lag2 = dplyr::lag(tn_load, n = 2),
-    lag3 = dplyr::lag(tn_load, n = 3),
-    .by = c(bay_segment)
-  ) |>
-  fill(
-    lag1,
-    lag2,
-    lag3,
-    .by = c(bay_segment),
-    .direction = 'up'
-  ) |>
-  mutate(
-    tn_load0 = tn_load,
-    tn_load1 = tn_load + lag1,
-    tn_load2 = tn_load + lag1 + lag2,
-    tn_load3 = tn_load + lag1 + lag2 + lag3
-  ) |>
-  select(-tn_load, -lag1, -lag2, -lag3)
-
-wqdat <- wqdat |>
-  select(-tn_load) |>
-  left_join(lddatlag, by = c('bay_segment', 'date'))
-
-modsreslag <- wqdat |>
-  filter(dec_time >= 1985) |>
-  pivot_longer(
-    cols = starts_with('tn_load'),
-    names_to = 'tn_load_lag',
-    values_to = 'tn_load'
-  ) |>
-  group_nest(bay_segment, tn_load_lag) |>
+modsreslag <- modprep_fun(wqdat, lddat) |>
   mutate(
     data = purrr::map(
       data,
@@ -437,21 +335,7 @@ modsreslag <- wqdat |>
       )
     ),
     prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
+    annsum = purrr::map(prds, annsum_fun)
   )
 
 save(modsreslag, file = here('data/modsreslag.RData'))
@@ -461,44 +345,7 @@ save(modsreslag, file = here('data/modsreslag.RData'))
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
 
-lddatlag <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  ) |>
-  mutate(
-    lag1 = dplyr::lag(tn_load, n = 1),
-    lag2 = dplyr::lag(tn_load, n = 2),
-    lag3 = dplyr::lag(tn_load, n = 3),
-    .by = c(bay_segment)
-  ) |>
-  fill(
-    lag1,
-    lag2,
-    lag3,
-    .by = c(bay_segment),
-    .direction = 'up'
-  ) |>
-  mutate(
-    tn_load0 = tn_load,
-    tn_load1 = tn_load + lag1,
-    tn_load2 = tn_load + lag1 + lag2,
-    tn_load3 = tn_load + lag1 + lag2 + lag3
-  ) |>
-  select(-tn_load, -lag1, -lag2, -lag3)
-
-wqdat <- wqdat |>
-  select(-tn_load) |>
-  left_join(lddatlag, by = c('bay_segment', 'date'))
-
-modslagk <- wqdat |>
-  filter(dec_time >= 1985) |>
-  pivot_longer(
-    cols = starts_with('tn_load'),
-    names_to = 'tn_load_lag',
-    values_to = 'tn_load'
-  ) |>
-  group_nest(bay_segment, tn_load_lag) |>
+modslagk <- modprep_fun(wqdat, lddat) |>
   mutate(
     mod = purrr::map(
       data,
@@ -521,21 +368,7 @@ modslagk <- wqdat |>
       )
     ),
     prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
+    annsum = purrr::map(prds, annsum_fun)
   )
 
 save(modslagk, file = here('data/modslagk.RData'))
@@ -545,44 +378,7 @@ save(modslagk, file = here('data/modslagk.RData'))
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
 
-lddatlag <- lddat |>
-  summarise(
-    tn_load = sum(tn_load),
-    .by = c(bay_segment, date)
-  ) |>
-  mutate(
-    lag1 = dplyr::lag(tn_load, n = 1),
-    lag2 = dplyr::lag(tn_load, n = 2),
-    lag3 = dplyr::lag(tn_load, n = 3),
-    .by = c(bay_segment)
-  ) |>
-  fill(
-    lag1,
-    lag2,
-    lag3,
-    .by = c(bay_segment),
-    .direction = 'up'
-  ) |>
-  mutate(
-    tn_load0 = tn_load,
-    tn_load1 = tn_load + lag1,
-    tn_load2 = tn_load + lag1 + lag2,
-    tn_load3 = tn_load + lag1 + lag2 + lag3
-  ) |>
-  select(-tn_load, -lag1, -lag2, -lag3)
-
-wqdat <- wqdat |>
-  select(-tn_load) |>
-  left_join(lddatlag, by = c('bay_segment', 'date'))
-
-modsreslagk <- wqdat |>
-  filter(dec_time >= 1985) |>
-  pivot_longer(
-    cols = starts_with('tn_load'),
-    names_to = 'tn_load_lag',
-    values_to = 'tn_load'
-  ) |>
-  group_nest(bay_segment, tn_load_lag) |>
+modsreslagk <- modprep_fun(wqdat, lddat) |>
   mutate(
     data = purrr::map(
       data,
@@ -625,21 +421,7 @@ modsreslagk <- wqdat |>
       )
     ),
     prds = purrr::map2(data, mod, pred_fun),
-    annsum = purrr::map(
-      prds,
-      ~ data.frame(.x) |>
-        mutate(
-          yr = lubridate::year(date)
-        ) |>
-        summarise(
-          chla = mean(chla, na.rm = T),
-          btfit = mean(btfit, na.rm = T),
-          btnorm = mean(btnorm, na.rm = T),
-          btfitmd = mean(btfitmd, na.rm = T),
-          btnormmd = mean(btnormmd, na.rm = T),
-          .by = c(yr)
-        )
-    )
+    annsum = purrr::map(prds, annsum_fun)
   )
 
 save(modsreslagk, file = here('data/modsreslagk.RData'))
@@ -654,18 +436,14 @@ save(modsreslagk, file = here('data/modsreslagk.RData'))
 
 load(file = here('data/wqdat.RData'))
 load(file = here('data/lddat.RData'))
-load(file = here('data/mods.RData'))
+load(file = here('data/modsreslagk.RData'))
 
-simdat1524 <- simprp_fun(wqdat, lddat, yrs = c(2015:2024))
-# simdat0014 <- simprp_fun(wqdat, lddat, yrs = c(2000:2014))
-# simdat8599 <- simprp_fun(wqdat, lddat, yrs = c(1985:1999))
+simdat <- simprp_fun(wqdat, lddat, yrs = c(2012:2024))
 
-save(simdat1524, file = here('data/simdat1524.RData'))
-# save(simdat0014, file = here('data/simdat0014.RData'))
-# save(simdat8599, file = here('data/simdat8599.RData'))
+save(simdat, file = here('data/simdat.RData'))
 
 # # view salinity predictions, vary through years
-# toplo <- simdat1721 |>
+# toplo <- simdat |>
 #   filter(yrs %in% c(1, 25, 50)) |>
 #   filter(ldfac %in% 'Actual Load')
 # ggplot(toplo, aes(x = date, y = sal, group = yrs, color = factor(yrs))) +
@@ -677,7 +455,7 @@ save(simdat1524, file = here('data/simdat1524.RData'))
 #   )
 
 # # view load scenarios, do not vary through years
-# toplo <- simdat1721 |>
+# toplo <- simdat |>
 #   select(bay_segment, tn_load, tn_loadann, ldfac, date) |>
 #   distinct()
 # ggplot(toplo, aes(x = date, y = tn_load, color = factor(ldfac))) +
@@ -695,11 +473,5 @@ save(simdat1524, file = here('data/simdat1524.RData'))
 #     color = "Load scenario"
 #   )
 
-simprddat1524 <- simprd_fun(mods, simdat1524, nsims = 10000)
-save(simprddat1524, file = here('data/simprddat1524.RData'))
-
-# simprddat0014 <- simprd_fun(mods, simdat0014, nsims = 10000)
-# save(simprddat0014, file = here('data/simprddat0014.RData'))
-
-# simprddat8599 <- simprd_fun(mods, simdat8599, nsims = 10000)
-# save(simprddat8599, file = here('data/simprddat8599.RData'))
+simprddat <- simprd_fun(modsreslagk, simdat, nsims = 100)
+save(simprddat, file = here('data/simprddat.RData'))
