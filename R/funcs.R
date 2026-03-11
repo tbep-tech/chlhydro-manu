@@ -145,6 +145,24 @@ pred_fun <- function(datin, modin) {
   return(out)
 }
 
+# get annual summaries of predictions
+annsum_fun <- function(prds) {
+  out <- data.frame(prds) |>
+    mutate(
+      yr = lubridate::year(date)
+    ) |>
+    summarise(
+      chla = mean(chla, na.rm = T),
+      btfit = mean(btfit, na.rm = T),
+      btnorm = mean(btnorm, na.rm = T),
+      btfitmd = mean(btfitmd, na.rm = T),
+      btnormmd = mean(btnormmd, na.rm = T),
+      .by = c(yr)
+    )
+
+  return(out)
+}
+
 # gridplot for gam
 # ... additional arguments to pass to gridpred_fun
 grid_plo <- function(
@@ -514,6 +532,61 @@ norm_fun <- function(dat_in, fits, btfits, salgrd) {
 
   # exit function
   return(dat_in)
+}
+
+# add lags to load data, then get cumulative loads by lag
+lddatlag_fun <- function(lddat) {
+  out <- lddat |>
+    summarise(
+      tn_load = sum(tn_load),
+      .by = c(bay_segment, date)
+    ) |>
+    mutate(
+      lag1 = dplyr::lag(tn_load, n = 1),
+      lag2 = dplyr::lag(tn_load, n = 2),
+      lag3 = dplyr::lag(tn_load, n = 3),
+      .by = c(bay_segment)
+    ) |>
+    fill(
+      lag1,
+      lag2,
+      lag3,
+      .by = c(bay_segment),
+      .direction = 'up'
+    ) |>
+    mutate(
+      tn_load0 = tn_load,
+      tn_load1 = tn_load + lag1,
+      tn_load2 = tn_load + lag1 + lag2,
+      tn_load3 = tn_load + lag1 + lag2 + lag3
+    ) |>
+    select(-tn_load, -lag1, -lag2, -lag3)
+
+  return(out)
+}
+
+# prep data for modeling with load lags
+# used for addl GAMs evaluating residuals, lags, and flexible k
+modprep_fun <- function(wqdat, lddat) {
+  lddatlag <- lddatlag_fun(lddat)
+
+  wqdat <- wqdat |>
+    mutate(salraw = sal) |>
+    rename(
+      tn_loadraw = tn_load
+    ) |>
+    left_join(lddatlag, by = c('bay_segment', 'date'))
+
+  out <- wqdat |>
+    filter(dec_time >= 1985) |>
+    pivot_longer(
+      cols = ends_with(c('load0', 'load1', 'load2', 'load3')),
+      names_to = 'tn_load_lag',
+      values_to = 'tn_load'
+    ) |>
+    group_nest(bay_segment, tn_load_lag)
+
+  return(out)
 }
 
 # get load scalars for forecasting
