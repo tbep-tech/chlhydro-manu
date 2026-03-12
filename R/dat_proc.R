@@ -473,5 +473,5 @@ save(simdat, file = here('data/simdat.RData'))
 #     color = "Load scenario"
 #   )
 
-simprddat <- simprd_fun(mods, simdat, nsims = 100, chunk = T)
+simprddat <- simprd_fun(mods, simdat, nsims = 10000, chunk = T)
 save(simprddat, file = here('data/simprddat.RData'))
