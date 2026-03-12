@@ -794,7 +794,7 @@ vert_seg <- tibble(
 ) |>
   mutate(
     ymid = (y + yend) / 2,
-    label = paste0('-', round(y - yend, 1), '%')
+    label = paste0('-', c(round(y, 1) - round(yend, 1)), '%')
   )
 
 p <- ggplot(
