@@ -1317,7 +1317,7 @@ dev.off()
 #   )
 
 # # -- Save individual panels to desktop ------------------------------------------
-# desktop <- 'C:/Users/mbeck/Desktop'
+# desktop <- '~/Desktop'
 
 # png(
 #   file.path(desktop, 'sim_process_a.png'),
