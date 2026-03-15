@@ -8,6 +8,7 @@ library(maps)
 library(ggspatial)
 library(sf)
 library(purrr)
+library(scales)
 
 source(here('R/funcs.R'))
 
@@ -1091,3 +1092,269 @@ p <- (p1 + theme(legend.position = 'none')) /
 png(here('figs/suppnorm.png'), width = 6, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
+
+# # simulation examples ----------------------------------------------------
+
+# # ============================================================
+# # OTB simulation process figure: Inputs -> Simulations -> Likelihood
+# # 4-panel layout showing the full workflow for OTB
+# # ============================================================
+
+# load(file = here('data/mods.RData'))
+# load(file = here('data/simprddat.RData'))
+# load(file = here('data/simdat.RData'))
+# otb_thresh <- 9.3
+# otb_tmdl <- 486
+
+# # shared color palette for loading scenarios (factor level order:
+# # Actual Load, TMDL Load Factor: 0.5, TMDL Load Factor: 1, TMDL Load Factor: 2)
+# ld_cols <- c(
+#   'Actual Load' = '#2c7bb6',
+#   'TMDL Load Factor: 0.5' = '#1a9641',
+#   'TMDL Load Factor: 1' = '#fdae61',
+#   'TMDL Load Factor: 2' = '#d7191c'
+# )
+# ld_labs <- c(
+#   'Actual Load' = 'Actual',
+#   'TMDL Load Factor: 0.5' = '\u00bd TMDL',
+#   'TMDL Load Factor: 1' = 'TMDL',
+#   'TMDL Load Factor: 2' = '2\u00d7 TMDL'
+# )
+
+# # -- Panel A: Projected salinity decline ----------------------------------------
+# # Monthly salinity time series for OTB at three future-year snapshots,
+# # mirroring the original scratch plot style (date x-axis, colored by future year)
+
+# toplo_sal <- simdat |>
+#   filter(bay_segment == 'OTB', ldfac == 'Actual Load', yrs %in% c(1, 25, 50)) |>
+#   mutate(
+#     yrs_lab = factor(
+#       paste0('Year ', yrs),
+#       levels = c('Year 1', 'Year 25', 'Year 50')
+#     )
+#   )
+
+# p_sal <- ggplot(
+#   toplo_sal,
+#   aes(x = date, y = sal, color = yrs_lab, group = yrs_lab)
+# ) +
+#   geom_line(linewidth = 0.7) +
+#   scale_color_manual(
+#     values = c(
+#       'Year 1' = '#74add1',
+#       'Year 25' = '#4575b4',
+#       'Year 50' = '#313695'
+#     )
+#   ) +
+#   scale_x_date(date_breaks = '4 years', date_labels = '%Y') +
+#   theme_minimal(base_size = 9) +
+#   theme(
+#     panel.grid.minor = element_blank(),
+#     legend.position = 'bottom'
+#   ) +
+#   labs(
+#     x = NULL,
+#     y = 'Salinity (ppt)',
+#     color = NULL
+#   )
+
+# # -- Panel B: Loading scenarios -------------------------------------------------
+# # Annual TN load time series for OTB by scenario, mirroring original scratch plot
+# # (date x-axis, colored by ldfac)
+
+# toplo_ld <- simdat |>
+#   filter(bay_segment == 'OTB', yrs == 1) |>
+#   select(ldfac, tn_load, date) |>
+#   distinct()
+
+# p_ld <- ggplot(
+#   toplo_ld,
+#   aes(x = date, y = tn_load, color = ldfac, group = ldfac)
+# ) +
+#   geom_line(linewidth = 0.7) +
+#   scale_color_manual(values = ld_cols, labels = ld_labs) +
+#   scale_x_date(date_breaks = '4 years', date_labels = '%Y') +
+#   scale_y_continuous(labels = comma) +
+#   theme_minimal(base_size = 9) +
+#   theme(
+#     panel.grid.minor = element_blank(),
+#     legend.position = 'bottom'
+#   ) +
+#   labs(
+#     x = NULL,
+#     y = 'Monthly TN load (t/mo)',
+#     color = NULL
+#   )
+
+# # -- Panel C: Simulation spaghetti at Year +1 vs Year +50 ----------------------
+# # Run 50 simulations for OTB under Actual Load at the two extreme future years.
+# # Shows how the GAM prediction interval shifts upward as salinity declines.
+
+# simdat_sub <- simdat |>
+#   filter(bay_segment == 'OTB', yrs %in% c(1, 50), ldfac == 'Actual Load')
+
+# sims_sub <- mods |>
+#   filter(bay_segment == 'OTB')
+
+# sims_sub <- simprd_fun(
+#   sims_sub,
+#   simdat_sub,
+#   nsims = 50,
+#   chunk = FALSE,
+#   all = TRUE
+# ) |>
+#   filter(bay_segment == 'OTB') |>
+#   select(-data, -mod, -prds, -annsum, -tst, -exceedsyr, -exceedssum) |>
+#   unnest('simsyr') |>
+#   mutate(yrs_lab = paste0('Year ', yrs))
+
+# # simulation means per year at each future-year scenario
+# sims_mean <- sims_sub |>
+#   summarise(
+#     chla_sim = mean(chla_sim, na.rm = TRUE),
+#     .by = c(yrs_lab, yr)
+#   )
+
+# # observed annual chl-a for the 2012-2024 base period
+# act_chla <- mods |>
+#   filter(bay_segment == 'OTB') |>
+#   unnest('data') |>
+#   filter(date >= min(simdat_sub$date) & date <= max(simdat_sub$date)) |>
+#   mutate(yr = year(date)) |>
+#   summarise(chla = mean(chla, na.rm = TRUE), .by = yr)
+
+# yr_pal <- c('Year 1' = '#74add1', 'Year 50' = '#d73027', 'Observed' = 'black')
+
+# p_sims <- ggplot(sims_sub, aes(x = yr, y = chla_sim)) +
+#   geom_line(
+#     aes(group = interaction(sim, yrs_lab), color = yrs_lab),
+#     alpha = 0.18,
+#     linewidth = 0.35
+#   ) +
+#   geom_line(
+#     data = sims_mean,
+#     aes(y = chla_sim, color = yrs_lab, group = yrs_lab),
+#     linewidth = 1.4
+#   ) +
+#   geom_line(
+#     data = act_chla,
+#     aes(x = yr, y = chla, color = 'Observed', group = 1),
+#     linewidth = 1,
+#     linetype = 'solid'
+#   ) +
+#   geom_hline(
+#     yintercept = otb_thresh,
+#     color = 'red',
+#     linetype = 'dashed',
+#     linewidth = 0.8
+#   ) +
+#   scale_color_manual(values = yr_pal) +
+#   scale_x_continuous(breaks = seq(2012, 2024, by = 4)) +
+#   theme_minimal(base_size = 9) +
+#   theme(
+#     panel.grid.minor = element_blank(),
+#     legend.position = 'bottom'
+#   ) +
+#   labs(
+#     x = NULL,
+#     y = 'Annual Chl-a (\u00b5g/L)',
+#     color = NULL
+#   )
+
+# # -- Panel D: Likelihood of exceeding threshold over 50 years -------------------
+# # Full 10,000-simulation results from simprddat, all four loading scenarios
+
+# toplo_lik <- simprddat |>
+#   filter(bay_segment == 'OTB') |>
+#   select(bay_segment, exceedssum) |>
+#   unnest('exceedssum')
+
+# lik_ends <- toplo_lik |>
+#   filter(yrs == 50) |>
+#   mutate(label = paste0(round(avexceeds, 0), '%'))
+
+# lik_starts <- toplo_lik |>
+#   filter(yrs == 1) |>
+#   mutate(label = paste0(round(avexceeds, 0), '%'))
+
+# p_lik <- ggplot(toplo_lik, aes(x = yrs, y = avexceeds, color = ldfac, fill = ldfac)) +
+#   geom_ribbon(
+#     aes(ymin = avexceeds - sdexceeds, ymax = avexceeds + sdexceeds),
+#     alpha = 0.15,
+#     color = NA
+#   ) +
+#   geom_line(linewidth = 0.9) +
+#   geom_point(data = lik_starts, aes(x = yrs, y = avexceeds), size = 2, show.legend = FALSE) +
+#   geom_text(
+#     data = lik_starts,
+#     aes(x = yrs - 1, y = avexceeds, label = label),
+#     size = 2.4,
+#     hjust = 1,
+#     show.legend = FALSE
+#   ) +
+#   geom_point(data = lik_ends, aes(x = yrs, y = avexceeds), size = 2, show.legend = FALSE) +
+#   geom_text(
+#     data = lik_ends,
+#     aes(x = yrs + 1, y = avexceeds, label = label),
+#     size = 2.4,
+#     hjust = 0,
+#     show.legend = FALSE
+#   ) +
+#   scale_x_continuous(limits = c(-1, 51), breaks = seq(0, 50, by = 10)) +
+#   scale_y_continuous(labels = function(x) paste0(x, '%')) +
+#   scale_color_manual(values = ld_cols, labels = ld_labs) +
+#   scale_fill_manual(values = ld_cols, labels = ld_labs) +
+#   theme_minimal(base_size = 9) +
+#   theme(
+#     panel.grid.minor = element_blank(),
+#     legend.position = 'bottom'
+#   ) +
+#   labs(
+#     x = 'Years into future',
+#     y = 'Likelihood of exceeding\nchl-a threshold',
+#     color = NULL,
+#     fill = NULL
+#   )
+
+# # -- Save individual panels to desktop ------------------------------------------
+# desktop <- 'C:/Users/mbeck/Desktop'
+
+# png(
+#   file.path(desktop, 'sim_process_a.png'),
+#   width = 8,
+#   height = 3.5,
+#   units = 'in',
+#   res = 300
+# )
+# print(p_sal)
+# dev.off()
+
+# png(
+#   file.path(desktop, 'sim_process_b.png'),
+#   width = 8,
+#   height = 3.5,
+#   units = 'in',
+#   res = 300
+# )
+# print(p_ld)
+# dev.off()
+
+# png(
+#   file.path(desktop, 'sim_process_c.png'),
+#   width = 8,
+#   height = 3.5,
+#   units = 'in',
+#   res = 300
+# )
+# print(p_sims)
+# dev.off()
+
+# png(
+#   file.path(desktop, 'sim_process_d.png'),
+#   width = 8,
+#   height = 3.5,
+#   units = 'in',
+#   res = 300
+# )
+# print(p_lik)
+# dev.off()
