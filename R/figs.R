@@ -1358,3 +1358,42 @@ dev.off()
 # )
 # print(p_lik)
 # dev.off()
+
+# # salinity v load --------------------------------------------------------
+
+# load(file = 'data/wqdat.RData')
+
+# toplo <- wqdat |>
+#   filter(dec_time >= 1985)
+
+# # compute R2 for each segment (log10 scale matches scale_y_log10)
+# r2_labs <- toplo |>
+#   group_by(bay_segment) |>
+#   summarise(
+#     r2 = summary(lm(log10(tn_load) ~ sal))$r.squared,
+#     .groups = 'drop'
+#   ) |>
+#   mutate(label = paste0(bay_segment, ' (R\u00b2 = ', round(r2, 2), ')')) |>
+#   select(bay_segment, label) |>
+#   deframe() # named vector: bay_segment -> label
+
+# p <- ggplot(
+#   toplo,
+#   aes(x = sal, y = tn_load, group = bay_segment)
+# ) +
+#   geom_point(size = 1, alpha = 0.4, shape = 16, fill = 'black') +
+#   geom_smooth(method = 'lm', formula = y ~ x) +
+#   scale_y_log10() +
+#   labs(x = 'Salinity (ppth)', y = 'TN Load (tons/mo)') +
+#   facet_wrap(~bay_segment, ncol = 4, labeller = as_labeller(r2_labs)) +
+#   theme_minimal()
+
+# png(
+#   file.path('~/Desktop/salvloadraw.png'),
+#   width = 8,
+#   height = 3.25,
+#   units = 'in',
+#   res = 600
+# )
+# print(p)
+# dev.off()
