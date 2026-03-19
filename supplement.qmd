@@ -14,7 +14,12 @@ author:
       orcid: 0000-0002-4996-0059
       institute: [TBEP]
       correspondence: true
-  - Rebecca Murphy:
+  - Edward T Sherwood:
+      email: esherwood@tbep.org
+      orcid: 0000-0001-5330-302X
+      institute: [TBEP]
+      correspondence: false
+  - Rebecca R Murphy:
       email: rmurphy@chesapeakebay.net
       orcid: 0000-0003-3391-1823
       institute: [CBP]
@@ -39,11 +44,6 @@ author:
       orcid: 0000-0002-3847-6501      
       institute: [TBEP]
       correspondence: false 
-  - Edward T Sherwood:
-      email: esherwood@tbep.org
-      orcid: 0000-0001-5330-302X
-      institute: [TBEP]
-      correspondence: false
 
 institute:
   - TBEP: Tampa Bay Estuary Program, 263 13th Ave S., Suite 350, St. Petersburg, Florida 33701 USA
