@@ -67,6 +67,17 @@ local function author_inline_generator (get_mark)
     end
     local res = List.clone(author.name)
     res[#res + 1] = pandoc.Superscript(intercalate(author_marks, {pandoc.Str ','}))
+    if author.orcid then
+      local orcid_str = stringify(author.orcid)
+      local orcid_url = 'https://orcid.org/' .. orcid_str
+      local orcid_link = pandoc.Link({pandoc.Str(orcid_str)}, orcid_url)
+      res:extend(List:new{
+        pandoc.Space(),
+        pandoc.Str('('),
+        orcid_link,
+        pandoc.Str(')')
+      })
+    end
     return res
   end
 end
