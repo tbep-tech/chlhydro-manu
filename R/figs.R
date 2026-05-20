@@ -1328,6 +1328,13 @@ dev.off()
 # )
 # print(p_sal)
 # dev.off()
+# svg(
+#   file.path(desktop, 'sim_process_a.svg'),
+#   width = 8,
+#   height = 3.5
+# )
+# print(p_sal)
+# dev.off()
 
 # png(
 #   file.path(desktop, 'sim_process_b.png'),
@@ -1335,6 +1342,13 @@ dev.off()
 #   height = 3.5,
 #   units = 'in',
 #   res = 300
+# )
+# print(p_ld)
+# dev.off()
+# svg(
+#   file.path(desktop, 'sim_process_b.svg'),
+#   width = 8,
+#   height = 3.5
 # )
 # print(p_ld)
 # dev.off()
@@ -1348,6 +1362,13 @@ dev.off()
 # )
 # print(p_sims)
 # dev.off()
+# svg(
+#   file.path(desktop, 'sim_process_c.svg'),
+#   width = 8,
+#   height = 3.5
+# )
+# print(p_sims)
+# dev.off()
 
 # png(
 #   file.path(desktop, 'sim_process_d.png'),
@@ -1355,6 +1376,13 @@ dev.off()
 #   height = 3.5,
 #   units = 'in',
 #   res = 300
+# )
+# print(p_lik)
+# dev.off()
+# svg(
+#   file.path(desktop, 'sim_process_d.svg'),
+#   width = 8,
+#   height = 3.5
 # )
 # print(p_lik)
 # dev.off()
