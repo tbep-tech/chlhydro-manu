@@ -1311,7 +1311,7 @@ dev.off()
 #   ) +
 #   labs(
 #     x = 'Years into future',
-#     y = 'Likelihood of exceeding\nchl-a threshold',
+#     y = 'Likelihood of exceeding\nchl-a threshold (8.5 µg/L)',
 #     color = NULL,
 #     fill = NULL
 #   )
