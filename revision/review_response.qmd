@@ -40,11 +40,11 @@ Specific Comments
 
 1\. Ln 55: missing period before "similarly"
 
-*response* 
+*Added.* 
 
 2\. Ln 117: for conciseness consider changing to "freshwater inflows and circulation".
 
-*response* 
+*Changed.* 
 
 3\. Ln 141: Consider adding bathymetry data to Figure 1 (if available) to accompany description
 
@@ -52,7 +52,7 @@ Specific Comments
 
 4\. Ln 149: Add reference to Figure 2.
 
-*response* 
+*The loading data in Figure 2 begins in 1985 and does not provide a comparison to those from the 1970s.  We have added....*
 
 5\. Consider moving the last paragraph in methods (ln 158 - 175) to the introduction.
 
@@ -70,7 +70,7 @@ Specific Comments
 
 *response* 
 
-9\. Ln 274: over what timeperiod was the mean loading computed?
+9\. Ln 274: over what time period was the mean loading computed?
 
 *response* 
 
