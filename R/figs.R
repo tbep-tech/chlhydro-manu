@@ -33,7 +33,9 @@ bbox <- st_bbox(tbseg)
 
 cudem <- rast("/vsicurl/https://tbcmp.s3.amazonaws.com/cudem_3087.tif")
 cudem_crop <- cudem |>
-  terra::crop(st_as_sfc(bbox) |> st_transform(3087) |> st_buffer(5000) |> terra::vect()) |>
+  terra::crop(
+    st_as_sfc(bbox) |> st_transform(3087) |> st_buffer(5000) |> terra::vect()
+  ) |>
   terra::project('EPSG:4326')
 
 cudem_df <- as.data.frame(cudem_crop, xy = TRUE) |>
@@ -91,12 +93,19 @@ m <- ggplot() +
     alpha = 1,
     inherit.aes = F
   ) +
-  scale_color_manual(values = c('Dredge\nchannels' = 'tomato1', 'EPCHC\nstations' = 'black'), name = NULL) +
-  guides(color = guide_legend(override.aes = list(
-    fill = c('tomato1', NA),
-    shape = c(22, 16),
-    size = c(3, 2)
-  ))) +
+  scale_color_manual(
+    values = c('Dredge\nchannels' = 'tomato1', 'EPCHC\nstations' = 'black'),
+    name = NULL
+  ) +
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        fill = c('tomato1', NA),
+        shape = c(22, 16),
+        size = c(3, 2)
+      )
+    )
+  ) +
   geom_sf(data = epcpts, aes(color = 'EPCHC\nstations'), inherit.aes = F) +
   annotation_north_arrow(
     location = 'tl',
@@ -1123,6 +1132,98 @@ p <- (p1 + theme(legend.position = 'none')) /
   plot_layout(axis_titles = 'collect_y')
 
 png(here('figs/suppnorm.png'), width = 6, height = 8, units = 'in', res = 300)
+print(p)
+dev.off()
+
+# GAM effects plots ------------------------------------------------------
+
+rsd <- F
+cp <- F
+rg <- T
+
+m <- mods$mod[[1]]
+p1a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = 'OTB', x = NULL, y = 'Partial effect (\u03bcg/L)')
+p1b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p1c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p1d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+
+m <- mods$mod[[2]]
+p2a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = 'HB', x = NULL, y = 'Partial effect (\u03bcg/L)')
+p2b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p2c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p2d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+
+m <- mods$mod[[3]]
+p3a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = 'MTB', x = NULL, y = 'Partial effect (\u03bcg/L)')
+p3b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p3c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+p3d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = NULL, y = NULL)
+
+m <- mods$mod[[4]]
+p4a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = 'LTB', x = 'Decimal Time', y = 'Partial effect (\u03bcg/L)')
+p4b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = 'Day of year', y = NULL)
+p4c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = 'Salinity (ppt)', y = NULL)
+p4d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+  labs(title = NULL, x = 'TN Load (tons / mo)', y = NULL)
+
+p <- p1a +
+  p1b +
+  p1c +
+  p1d +
+  p2a +
+  p2b +
+  p2c +
+  p2d +
+  p3a +
+  p3b +
+  p3c +
+  p3d +
+  p4a +
+  p4b +
+  p4c +
+  p4d +
+  plot_layout(ncol = 4) &
+  theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+
+png(
+  here('figs/suppgameff1.png'),
+  width = 10,
+  height = 9,
+  units = 'in',
+  res = 300
+)
 print(p)
 dev.off()
 

@@ -70,15 +70,15 @@ Specific Comments
 
 8\. Ln 269: minimum and maximum observed over what time-period?
 
-*response* 
+*Text was modified to "minimum and maximum observed over the period of record for each bay segment".* 
 
 9\. Ln 274: over what time period was the mean loading computed?
 
-*Text was modified to "minimum and maximum * 
+*This was also the mean loading for the period of record for each bay segment, similar to salinity.  Text was modified similarly as the previous response.* 
 
 10\. Ln 322: Are the chlorophyll-a thresholds defined in FDEP's water quality standards? It would be helpful to clarify where these numbers come from. Citing Figure 2, which shows the relevant regulatory criteria would likely be sufficient.
 
-*response* 
+*Yes, the chlorophyll-a thresholds are FDEP standards under the bay's Reasonable Assurance Plan. A citation to Figure 2 was included and "regulatory" was added as a text qualifier for the chlorophyll-a thresholds.* 
 
 11\. Ln 349: Is the lower percent explained in LTB due to aliasing of tidal variability in salinity data since the data was depth-averaged?
 
@@ -86,15 +86,15 @@ Specific Comments
 
 12\. Ln 353 - 356: I believe this is determined by the p-value, which should be clarified in the text.
 
-*response* 
+*Yes, this is correct, although we note that the journal discourages general statements about p-values.  We revised the sentence to include more detail about these main effects: "All bay segments had individual smoothers for decimal time, day of year, and salinity that explained a unique portion of the variance in chlorophyll-a (Table 1), although the defined relationships varied from linear (estimated degrees of freedom, edf = 1, e.g., decimal time for OTB, salinity for HB) to highly non-linear (edf >> 1, day of year for all bay segments)."* 
 
 13\. Ln 365 - 367: Is this because the water column is less stratified? Or because there is less episodic variation in the load, which decreases the likelihood of aliasing higher frequency variability due to storms? In general, some of the trends in model-data agreement across segments are not particularly surprising given the model setup.
 
-*response* 
+*Since stratification does not occur regularly in Tampa Bay, the decreased fit in the wet season is likely due to higher variability in chlorophyll-a and additional factors beyond those included in the model that could influence primary productivity. Conversely, it is very possible that chlorophyll-a during the dry season is captured more fully by the time variables in the model (decimal time, day or year) as other parameters have less of an influence outside of the growing season.  We agree, though, that these results are not particularly surprising but it is worth explaining times when the models performed better or worse to help the reader understand factors that could influence chlorophyll-a dynamics.* 
 
 14\. Figure 5: Consider showing the effect plots for the original GAM instead of the salinity-normalized analysis.
 
-*response* 
+*We retain figure 5 because it is central to the second objective of the paper to identify how these models can be used to disambiguate the individual effects of salinity and loading, particularly over time as in the current figures (the effects plots from standard GAM output show the effects across the range of the parameters, not time).  However, we have included conventional GAM effects plot for each model in the supplement to help the reader better visualize the smoothers and their interactions (Figures S2 and S3).* 
 
 15\. Figure 6: Consider making the x- and y-axis scales the same for the different segments because the e.g., stronger loading effect in OTB/HB isn't immediately obvious. Also, are the lines necessary since the points are color-coded? You could instead use a color gradient to represent year as in Figure 3. This would lessen the need to have year labels, which should be described in the caption if included.
 
