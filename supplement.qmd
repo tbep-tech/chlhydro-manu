@@ -66,6 +66,7 @@ library(knitr)
 library(here)
 library(flextable)
 
+load(file = here('tabs/suppaictab.RData'))
 load(file = here('tabs/suppgamtab.RData'))
 load(file = here('tabs/suppconcurvotbtab.RData'))
 load(file = here('tabs/suppconcurvhbtab.RData'))
@@ -80,6 +81,12 @@ load(file = here('tabs/suppconcurvltbtab.RData'))
 {{< pagebreak >}}
 
 ## Tables {.unnumbered}
+
+```{r}
+#| label: tbl-supaictab
+#| tbl-cap: "Comparison of Generalized Additive Models for chlorophyll-a for each bay segment using a Gamma and Gaussian (log-link) error distributions.  Model fit was assessed using Akaike information criterion [AIC, @akaike1974], with the lowest AIC value by segment shown in bold. df: degrees of freedom; OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+suppaictab
+```
 
 ```{r}
 #| label: tbl-supgamtab
@@ -118,3 +125,7 @@ suppconcurvmtbtab
 #| tbl-cap: "Concurvity estimates for the __Lower Tampa Bay__ Generalized Additive Models. Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvltbtab
 ```
+
+{{< pagebreak >}}
+
+## References {.unnumbered}

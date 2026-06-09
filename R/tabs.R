@@ -471,6 +471,97 @@ liktab <- totab |>
 
 save(liktab, file = here('tabs/liktab.RData'))
 
+# supp gamma vs gauss log models -----------------------------------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/mods.RData'))
+
+modsgamma <- mods |>
+  select(-prds, -annsum)
+
+modsgauss <- wqdat |>
+  filter(dec_time >= 1985) |>
+  group_nest(bay_segment) |>
+  mutate(
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_load, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        knots = list(doy = c(0, 366)),
+        family = gaussian(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    )
+  )
+
+AIC(modsgamma$mod[[1]], modsgauss$mod[[1]])
+# AIC(modsgamma$mod[[2]], modsgauss$mod[[2]])
+# AIC(modsgamma$mod[[3]], modsgauss$mod[[3]])
+# AIC(modsgamma$mod[[4]], modsgauss$mod[[4]])
+
+aiccomp <- modsgamma |>
+  select(bay_segment, mod_gamma = mod) |>
+  left_join(
+    modsgauss |> select(bay_segment, mod_gauss = mod),
+    by = 'bay_segment'
+  ) |>
+  mutate(
+    aic = purrr::map2(mod_gamma, mod_gauss, ~ AIC(.x, .y)),
+    gamma_df = purrr::map_dbl(aic, ~ round(.x[1, 'df'], 1)),
+    gamma_aic = purrr::map_dbl(aic, ~ round(.x[1, 'AIC'], 1)),
+    gauss_df = purrr::map_dbl(aic, ~ round(.x[2, 'df'], 1)),
+    gauss_aic = purrr::map_dbl(aic, ~ round(.x[2, 'AIC'], 1)),
+    delta_aic = round(gauss_aic - gamma_aic, 1)
+  ) |>
+  select(bay_segment, gamma_df, gamma_aic, gauss_df, gauss_aic, delta_aic)
+
+suppaictab <- aiccomp |>
+  flextable() |>
+  add_header_row(
+    values = c('', 'Gamma', 'Gaussian (log)', ''),
+    colwidths = c(1, 2, 2, 1)
+  ) |>
+  set_header_labels(
+    i = 2,
+    values = c(
+      'Bay Segment',
+      'df',
+      'AIC',
+      'df',
+      'AIC',
+      'ΔAIC'
+    )
+  ) |>
+  merge_at(i = 1, j = 2:3, part = 'header') |>
+  merge_at(i = 1, j = 4:5, part = 'header') |>
+  align(align = 'center', part = 'header') |>
+  align(align = 'left', part = 'header', i = 1) |>
+  align(align = 'left', part = 'all', j = 2:6) |>
+  bold(i = which(aiccomp$gamma_aic < aiccomp$gauss_aic), j = 'gamma_aic') |>
+  bold(i = which(aiccomp$gauss_aic < aiccomp$gamma_aic), j = 'gauss_aic') |>
+  padding(padding = 0, part = 'all') |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  fontsize(size = 9, part = 'body') |>
+  add_footer_lines(
+    'ΔAIC = Gaussian (log) AIC - Gamma AIC'
+  ) |>
+  font(part = 'footer', fontname = 'Times New Roman') |>
+  fontsize(size = 8, part = 'footer') |>
+  autofit()
+
+save(suppaictab, file = here('tabs/suppaictab.RData'))
+
 # supp tab lag comp ------------------------------------------------------
 
 # load model data

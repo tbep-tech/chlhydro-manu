@@ -64,7 +64,9 @@ Specific Comments
 
 7\. Ln 227 - 229: the justification for assuming a gamma distribution should be elaborated further
 
-*response* 
+*Text was added about justification for the distribution and a table showing a comparison of Gaussian/log-link with the existing Gamma models was included in supplement.*
+ 
+*"Models using a Gaussian distribution with a log-link function were also evaluated, although using a Gamma distribution was superior when compared with Akaike information criterion [@akaike1974, Table S1]."* 
 
 8\. Ln 269: minimum and maximum observed over what time-period?
 
@@ -72,7 +74,7 @@ Specific Comments
 
 9\. Ln 274: over what time period was the mean loading computed?
 
-*response* 
+*Text was modified to "minimum and maximum * 
 
 10\. Ln 322: Are the chlorophyll-a thresholds defined in FDEP's water quality standards? It would be helpful to clarify where these numbers come from. Citing Figure 2, which shows the relevant regulatory criteria would likely be sufficient.
 
