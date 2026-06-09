@@ -9,6 +9,7 @@ library(ggspatial)
 library(sf)
 library(purrr)
 library(scales)
+library(terra)
 
 source(here('R/funcs.R'))
 
@@ -29,6 +30,15 @@ chnls <- st_read(here('data/data-raw/Dredge_channels.shp')) %>%
   st_transform(4326)
 
 bbox <- st_bbox(tbseg)
+
+cudem <- rast("/vsicurl/https://tbcmp.s3.amazonaws.com/cudem_3087.tif")
+cudem_crop <- cudem |>
+  terra::crop(st_as_sfc(bbox) |> st_transform(3087) |> st_buffer(5000) |> terra::vect()) |>
+  terra::project('EPSG:4326')
+
+cudem_df <- as.data.frame(cudem_crop, xy = TRUE) |>
+  rename(depth = 3) |>
+  filter(!is.na(depth) & depth < 0)
 
 minset <- ggplot() +
   geom_sf(data = flpoly, fill = 'grey', color = NA) +
@@ -61,14 +71,33 @@ m <- ggplot() +
     type = 'cartolight',
     cachedir = system.file("rosm.cache", package = "ggspatial")
   ) +
+  geom_raster(
+    data = cudem_df,
+    aes(x = x, y = y, fill = depth),
+    inherit.aes = FALSE,
+    alpha = 0.7
+  ) +
+  scale_fill_gradient(
+    low = '#08306b',
+    high = '#c6dbef',
+    name = 'Depth (m)',
+    labels = function(x) abs(x),
+    limits = c(min(cudem_df$depth), 0)
+  ) +
   geom_sf(
     data = chnls,
-    color = 'tomato1',
+    aes(color = 'Dredge\nchannels'),
     fill = 'tomato1',
     alpha = 1,
     inherit.aes = F
   ) +
-  geom_sf(data = epcpts, color = 'black', inherit.aes = F) +
+  scale_color_manual(values = c('Dredge\nchannels' = 'tomato1', 'EPCHC\nstations' = 'black'), name = NULL) +
+  guides(color = guide_legend(override.aes = list(
+    fill = c('tomato1', NA),
+    shape = c(22, 16),
+    size = c(3, 2)
+  ))) +
+  geom_sf(data = epcpts, aes(color = 'EPCHC\nstations'), inherit.aes = F) +
   annotation_north_arrow(
     location = 'tl',
     style = north_arrow_orienteering(fill = c('black', 'black'), text_col = NA),
@@ -98,7 +127,11 @@ m <- ggplot() +
     ylim = bbox[c('ymin', 'ymax')],
     crs = 4326
   ) +
-  thm
+  thm +
+  theme(
+    legend.key.spacing.y = unit(5, 'pt'),
+    legend.key = element_rect(fill = 'white')
+  )
 
 png(here('figs/map.png'), width = 4, height = 5, units = 'in', res = 300)
 print(m)

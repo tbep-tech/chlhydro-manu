@@ -48,19 +48,19 @@ Specific Comments
 
 3\. Ln 141: Consider adding bathymetry data to Figure 1 (if available) to accompany description
 
-*response* 
+*Bathymetry was added to the figure, in addition to some legend items to make the elements more readable.* 
 
 4\. Ln 149: Add reference to Figure 2.
 
-*The loading data in Figure 2 begins in 1985 and does not provide a comparison to those from the 1970s.  We have added....*
+*The loading data in Figure 2 begins in 1985 and does not provide a comparison to those from the 1970s "worst-case" scenario.  We have added a citation to the historical document from which those estimates were obtained and the current for comparison [@tbep0494; @janicki23].*
 
 5\. Consider moving the last paragraph in methods (ln 158 - 175) to the introduction.
 
-*response* 
+*This paragraph was moved to the second to last paragraph of the introduction.* 
 
 6\. Ln 213- 215: Add a citation to show this is a previously documented approach for dealing with long-term change as well as seasonal variability in the time component. 
 
-*response* 
+*A citation to @beck2022b was added since this was the origin of the concept.* 
 
 7\. Ln 227 - 229: the justification for assuming a gamma distribution should be elaborated further
 
@@ -114,3 +114,5 @@ Other minor comments are 1) Given the lack of documented EDA, I am not sure abou
 Overall, this is a great study and could be improved by adding some form of EDA that readers can take away from this study.
 
 *response* 
+
+## References
