@@ -1135,91 +1135,116 @@ png(here('figs/suppnorm.png'), width = 6, height = 8, units = 'in', res = 300)
 print(p)
 dev.off()
 
-# GAM effects plots ------------------------------------------------------
+# GAM effects plots1 -----------------------------------------------------
 
-rsd <- F
-cp <- F
-rg <- T
+segs <- c('OTB', 'HB', 'MTB', 'LTB')
+xlabs <- c(
+  'Decimal Time',
+  'Day of year',
+  'Salinity (ppt)',
+  'TN Load (tons / mo)'
+)
 
-m <- mods$mod[[1]]
-p1a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = 'OTB', x = NULL, y = 'Partial effect (\u03bcg/L)')
-p1b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p1c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p1d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
+draw_smoother <- function(mod, select, seg, is_last_row) {
+  draw(
+    mod,
+    residuals = FALSE,
+    select = select,
+    rug = TRUE,
+    caption = FALSE,
+    ncol = 1
+  ) +
+    geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
+    labs(
+      title = if (select == 1) seg else NULL,
+      x = if (is_last_row) xlabs[select] else NULL,
+      y = if (select == 1) 'Partial effect (\u03bcg/L)' else NULL
+    )
+}
 
-m <- mods$mod[[2]]
-p2a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = 'HB', x = NULL, y = 'Partial effect (\u03bcg/L)')
-p2b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p2c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p2d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
+plots <- purrr::imap(mods$mod, function(mod, i) {
+  purrr::map(1:4, ~ draw_smoother(mod, .x, segs[i], i == 4))
+}) |>
+  unlist(recursive = FALSE)
 
-m <- mods$mod[[3]]
-p3a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = 'MTB', x = NULL, y = 'Partial effect (\u03bcg/L)')
-p3b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p3c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-p3d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = NULL, y = NULL)
-
-m <- mods$mod[[4]]
-p4a <- draw(m, residuals = rsd, select = 1, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = 'LTB', x = 'Decimal Time', y = 'Partial effect (\u03bcg/L)')
-p4b <- draw(m, residuals = rsd, select = 2, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = 'Day of year', y = NULL)
-p4c <- draw(m, residuals = rsd, select = 3, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = 'Salinity (ppt)', y = NULL)
-p4d <- draw(m, residuals = rsd, select = 4, rug = rg, caption = cp, ncol = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed', color = 'black') +
-  labs(title = NULL, x = 'TN Load (tons / mo)', y = NULL)
-
-p <- p1a +
-  p1b +
-  p1c +
-  p1d +
-  p2a +
-  p2b +
-  p2c +
-  p2d +
-  p3a +
-  p3b +
-  p3c +
-  p3d +
-  p4a +
-  p4b +
-  p4c +
-  p4d +
-  plot_layout(ncol = 4) &
+p <- wrap_plots(plots, ncol = 4) &
   theme_minimal() +
     theme(panel.grid.minor = element_blank())
 
 png(
   here('figs/suppgameff1.png'),
   width = 10,
+  height = 9,
+  units = 'in',
+  res = 300
+)
+print(p)
+dev.off()
+
+# GAM effects plots (bivariate ti() smooths) ----------------------------
+
+var_labs <- c(
+  dec_time = 'Decimal Time',
+  doy = 'Day of Year',
+  sal = 'Salinity (ppt)',
+  tn_load = 'TN Load (tons/mo)'
+)
+
+make_ti_row <- function(mod, seg, is_last_row) {
+  ti_names <- gratia::smooths(mod) |> (\(x) x[grepl('^ti\\(', x)])()
+
+  # pull smooth estimates for all ti() terms at once
+  ti_data <- purrr::map_dfr(ti_names, function(nm) {
+    gratia::smooth_estimates(mod, smooth = nm) |>
+      mutate(.smooth_nm = nm)
+  })
+
+  # symmetric fill limits shared across all panels in this row
+  abs_max <- max(abs(ti_data$.estimate), na.rm = TRUE)
+  fill_lims <- c(-abs_max, abs_max)
+
+  purrr::imap(ti_names, function(nm, j) {
+    d <- filter(ti_data, .smooth_nm == nm)
+    pred_cols <- names(d)[!grepl('^[.]', names(d))]
+    xv <- pred_cols[1]
+    yv <- pred_cols[2]
+
+    ggplot(d, aes(x = .data[[xv]], y = .data[[yv]], fill = .estimate)) +
+      geom_raster(interpolate = TRUE) +
+      geom_contour(aes(z = .estimate), color = 'black', alpha = 0.4) +
+      scale_fill_distiller(
+        type = 'div',
+        palette = 'RdBu',
+        direction = 1,
+        limits = fill_lims,
+        name = 'Effect (μg/L)',
+        guide = if (j == length(ti_names)) {
+          guide_colorbar(barheight = unit(3, 'cm'))
+        } else {
+          'none'
+        }
+      ) +
+      labs(
+        title = if (j == 1) seg else NULL,
+        x = if (is_last_row) var_labs[xv] else NULL,
+        y = var_labs[yv]
+      ) +
+      theme_minimal() +
+      theme(panel.grid.minor = element_blank())
+  })
+}
+
+segs <- c('OTB', 'HB', 'MTB', 'LTB')
+ti_plots <- purrr::imap(mods$mod, function(mod, i) {
+  make_ti_row(mod, segs[i], i == 4)
+}) |>
+  unlist(recursive = FALSE)
+
+p <- wrap_plots(ti_plots, ncol = 6)
+
+png(
+  here('figs/suppgameff2.png'),
+  width = 15,
   height = 9,
   units = 'in',
   res = 300
