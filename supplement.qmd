@@ -84,6 +84,10 @@ load(file = here('tabs/suppconcurvltbtab.RData'))
 
 {{< pagebreak >}}
 
+![Effects plots for bivariate smoothers from Generalized Additive Models applied to each bay segment.  Each plot shows the modeled effects on chlorophyll-a of the smoothers identified on the x- and y-axes.  Observed values are shown as points to emphasize the typical ranges for each parameter combination. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay](figs/suppgameff2.png){#fig-suppgameff2}
+
+{{< pagebreak >}}
+
 ## Tables {.unnumbered}
 
 ```{r}

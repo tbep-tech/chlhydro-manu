@@ -10,6 +10,7 @@ library(sf)
 library(purrr)
 library(scales)
 library(terra)
+library(scico)
 
 source(here('R/funcs.R'))
 
@@ -1181,7 +1182,7 @@ png(
 print(p)
 dev.off()
 
-# GAM effects plots (bivariate ti() smooths) ----------------------------
+# GAM effects plots2 -----------------------------------------------------
 
 var_labs <- c(
   dec_time = 'Decimal Time',
@@ -1190,40 +1191,74 @@ var_labs <- c(
   tn_load = 'TN Load (tons/mo)'
 )
 
-make_ti_row <- function(mod, seg, is_last_row) {
+make_ti_row <- function(mod, seg, is_last_row, dist = 0.1) {
   ti_names <- gratia::smooths(mod) |> (\(x) x[grepl('^ti\\(', x)])()
 
-  # pull smooth estimates for all ti() terms at once
-  ti_data <- purrr::map_dfr(ti_names, function(nm) {
-    gratia::smooth_estimates(mod, smooth = nm) |>
-      mutate(.smooth_nm = nm)
+  mod_data <- model.frame(mod)
+
+  # pull smooth estimates separately; mask grid points outside the data domain
+  smooth_data_list <- purrr::map(ti_names, function(nm) {
+    d <- gratia::smooth_estimates(mod, select = nm)
+    pred_cols <- names(d)[!grepl('^[.]', names(d))]
+    xv <- pred_cols[1]
+    yv <- pred_cols[2]
+    if (!is.null(dist)) {
+      excl <- mgcv::exclude.too.far(
+        d[[xv]],
+        d[[yv]],
+        mod_data[[xv]],
+        mod_data[[yv]],
+        dist = dist
+      )
+      d$.estimate[excl] <- NA
+    }
+    d
   })
 
   # symmetric fill limits shared across all panels in this row
-  abs_max <- max(abs(ti_data$.estimate), na.rm = TRUE)
+  abs_max <- max(purrr::map_dbl(
+    smooth_data_list,
+    ~ max(abs(.x$.estimate), na.rm = TRUE)
+  ))
   fill_lims <- c(-abs_max, abs_max)
 
   purrr::imap(ti_names, function(nm, j) {
-    d <- filter(ti_data, .smooth_nm == nm)
+    d <- smooth_data_list[[j]]
     pred_cols <- names(d)[!grepl('^[.]', names(d))]
     xv <- pred_cols[1]
     yv <- pred_cols[2]
 
     ggplot(d, aes(x = .data[[xv]], y = .data[[yv]], fill = .estimate)) +
       geom_raster(interpolate = TRUE) +
-      geom_contour(aes(z = .estimate), color = 'black', alpha = 0.4) +
-      scale_fill_distiller(
-        type = 'div',
-        palette = 'RdBu',
+      geom_point(
+        data = mod_data,
+        aes(x = .data[[xv]], y = .data[[yv]]),
+        inherit.aes = FALSE,
+        size = 0.4,
+        alpha = 0.15,
+        color = 'grey30'
+      ) +
+      # geom_contour(
+      #   aes(x = .data[[xv]], y = .data[[yv]], z = .estimate),
+      #   color = 'black',
+      #   alpha = 0.4,
+      #   inherit.aes = FALSE,
+      #   na.rm = TRUE
+      # ) +
+      scico::scale_fill_scico(
+        palette = 'vik',
         direction = 1,
         limits = fill_lims,
         name = 'Effect (μg/L)',
+        na.value = 'grey80',
         guide = if (j == length(ti_names)) {
           guide_colorbar(barheight = unit(3, 'cm'))
         } else {
           'none'
         }
       ) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
       labs(
         title = if (j == 1) seg else NULL,
         x = if (is_last_row) var_labs[xv] else NULL,
@@ -1236,7 +1271,7 @@ make_ti_row <- function(mod, seg, is_last_row) {
 
 segs <- c('OTB', 'HB', 'MTB', 'LTB')
 ti_plots <- purrr::imap(mods$mod, function(mod, i) {
-  make_ti_row(mod, segs[i], i == 4)
+  make_ti_row(mod, segs[i], i == 4, dist = NULL)
 }) |>
   unlist(recursive = FALSE)
 
@@ -1244,10 +1279,10 @@ p <- wrap_plots(ti_plots, ncol = 6)
 
 png(
   here('figs/suppgameff2.png'),
-  width = 15,
-  height = 9,
+  width = 13,
+  height = 8,
   units = 'in',
-  res = 300
+  res = 400
 )
 print(p)
 dev.off()

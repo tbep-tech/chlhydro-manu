@@ -86,7 +86,7 @@ Specific Comments
 
 12\. Ln 353 - 356: I believe this is determined by the p-value, which should be clarified in the text.
 
-*Yes, this is correct, although we note that the journal discourages general statements about p-values.  We revised the sentence to include more detail about these main effects: "All bay segments had individual smoothers for decimal time, day of year, and salinity that explained a unique portion of the variance in chlorophyll-a (Table 1), although the defined relationships varied from linear (estimated degrees of freedom, edf = 1, e.g., decimal time for OTB, salinity for HB) to highly non-linear (edf >> 1, day of year for all bay segments)."* 
+*Yes, this is correct, although we note that the journal discourages general statements about p-values.  We revised the sentence to include more detail about these main effects: "All bay segments had individual smoothers for decimal time, day of year, and salinity that explained a unique portion of the variance in chlorophyll-a (Table 1), although the defined relationships varied from linear (estimated degrees of freedom, edf = 1; e.g., decimal time for OTB, salinity for OTB and HB) to highly non-linear (edf >> 1; day of year for all bay segments)."* 
 
 13\. Ln 365 - 367: Is this because the water column is less stratified? Or because there is less episodic variation in the load, which decreases the likelihood of aliasing higher frequency variability due to storms? In general, some of the trends in model-data agreement across segments are not particularly surprising given the model setup.
 
