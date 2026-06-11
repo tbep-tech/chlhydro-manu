@@ -1127,13 +1127,111 @@ p3 <- ggplot(normsann, aes(x = yr)) +
     panel.grid.minor = element_blank()
   )
 
+# inset for panel c: zoomed last 3 years with effect arrows at annot_yr
+last_yr <- max(normsann$yr)
+annot_yr <- last_yr - 1 # use year with more vertical separation
+x_arr <- annot_yr # place arrows directly at annot_yr
+
+ld_seg <- filter(normsann, yr == annot_yr) |>
+  transmute(
+    x = x_arr,
+    xend = x_arr,
+    y = btnorm + 0.2,
+    yend = btnormmd - 0.2,
+    ymid = (btnorm + btnormmd) / 2
+  )
+sal_seg <- filter(normsann, yr == annot_yr) |>
+  transmute(
+    x = x_arr,
+    xend = x_arr,
+    y = btfit + 0.24,
+    yend = btnorm - 0.17,
+    ymid = (btfit + btnorm) / 2
+  )
+
+p_inset <- normsann |>
+  filter(yr >= annot_yr - 1) |>
+  ggplot(aes(x = yr)) +
+  geom_line(aes(y = btnorm), color = 'tomato1') +
+  geom_line(aes(y = btnormmd), color = 'dodgerblue3', linetype = 'dashed') +
+  geom_point(
+    aes(y = btfit),
+    shape = 21,
+    fill = 'black',
+    color = 'black',
+    size = 2
+  ) +
+  geom_segment(
+    data = ld_seg,
+    aes(x = x, xend = xend, y = y, yend = yend),
+    arrow = arrow(ends = 'both', length = unit(0.1, 'cm'), type = 'closed'),
+    inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = ld_seg,
+    aes(x = xend + 0.1, y = ymid, label = 'Load Effect'),
+    hjust = 0,
+    size = 2.5,
+    inherit.aes = FALSE
+  ) +
+  geom_segment(
+    data = sal_seg,
+    aes(x = x, xend = xend, y = y, yend = yend),
+    arrow = arrow(ends = 'both', length = unit(0.1, 'cm'), type = 'closed'),
+    inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = sal_seg,
+    aes(x = xend + 0.1, y = ymid, label = 'Salinity Effect'),
+    hjust = 0,
+    size = 2.5,
+    inherit.aes = FALSE
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0.05, 0.1))) +
+  theme_minimal(base_size = 8) +
+  theme(
+    legend.position = 'none',
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = 'grey50', fill = NA, linewidth = 0.5)
+  )
+
+# zoom rectangle bounds derived from the data
+zoom_dat <- filter(normsann, yr >= annot_yr - 1)
+zoom_ymin <- min(
+  c(zoom_dat$btfit, zoom_dat$btnorm, zoom_dat$btnormmd),
+  na.rm = TRUE
+) -
+  0.3
+zoom_ymax <- max(
+  c(zoom_dat$btfit, zoom_dat$btnorm, zoom_dat$btnormmd),
+  na.rm = TRUE
+) +
+  0.3
+
+p3_inset <- p3 +
+  theme(legend.position = 'bottom') +
+  annotate(
+    'rect',
+    xmin = annot_yr - 1.5,
+    xmax = last_yr + 0.5,
+    ymin = zoom_ymin,
+    ymax = zoom_ymax,
+    fill = NA,
+    color = 'grey50',
+    linewidth = 0.5
+  ) +
+  inset_element(p_inset, left = 0.7, bottom = 0.52, right = 0.97, top = 1.0)
+
 # combine: 1 column, 3 rows; p1 legend hidden (p2 repeats it), p3 legend separate
 p <- (p1 + theme(legend.position = 'none')) /
   (p2 + theme(legend.position = 'bottom')) /
-  (p3 + theme(legend.position = 'bottom')) +
+  p3_inset +
   plot_layout(axis_titles = 'collect_y')
 
-png(here('figs/suppnorm.png'), width = 6, height = 8, units = 'in', res = 300)
+png(here('figs/suppnorm.png'), width = 6, height = 8, units = 'in', res = 600)
 print(p)
 dev.off()
 
