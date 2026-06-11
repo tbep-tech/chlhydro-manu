@@ -608,7 +608,7 @@ set.seed(123)
 p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  geom_path(aes(group = 1), color = 'gray80', linewidth = 1) +
+  # geom_path(aes(group = 1), color = 'gray80', linewidth = 1) +
   geom_point(aes(color = yrgrp), size = 2) +
   geom_text_repel(
     aes(label = yr, color = yrgrp),
@@ -629,7 +629,7 @@ p1 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
 
 # create yrgrp means
 set.seed(123)
-p2 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
+p2 <- ggplot() + #toplo1, aes(x = saleff, y = ldeff)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
   geom_point(alpha = 0) +
@@ -669,7 +669,7 @@ p2 <- ggplot(toplo1, aes(x = saleff, y = ldeff)) +
   scale_color_viridis_d(option = "D", end = 0.8) +
   scale_y_continuous(expand = c(0.1, 0.1)) +
   scale_x_continuous(expand = c(0.1, 0.1)) +
-  facet_wrap(~bay_segment, scales = 'free') +
+  facet_wrap(~bay_segment) + #, scales = 'free') +
   labs(
     color = "Year",
     x = 'Salinity Effect (µg/L)',

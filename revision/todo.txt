@@ -1,1 +1,3 @@
 * update line numbers in review response with revision
+* verify correct citations for supplemental figures and tables in main text
+* add "S" preceding figure and table numbers in the supplement

@@ -16,13 +16,7 @@ wqdat <- epcdata |>
     SampleTime,
     tn,
     chla,
-    Sal_Top_ppth,
-    Sal_Mid_ppth,
-    Sal_Bottom_ppth
-  ) |>
-  mutate(
-    sal = mean(c(Sal_Top_ppth, Sal_Mid_ppth, Sal_Bottom_ppth), na.rm = T),
-    .by = c(bay_segment, SampleTime)
+    sal = Sal_Top_ppth,
   ) |>
   mutate(
     date = floor_date(as.Date(SampleTime), unit = 'month')

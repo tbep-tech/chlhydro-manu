@@ -22,7 +22,7 @@ spelling::spell_check_files(here::here('revision/review_response.qmd'))
 
 1\. Ln 180: It seems like it would be more relevant to the analysis of chlorophyll-a to analyze surface salinity, rather than averaging across all depths. Additional rationale should be given to justify this choice. Does interpretation of model output change if surface salinity rather than depth-averaged salinity is used? By including bottom salinity, is there greater aliasing of tidal variability in the monthly salinity data? Or is this accounted for during the cruise surveys (e.g., sampling at similar tidal stage across all cruises)?
 
-*response*
+*This is a valid comment and one that we considered during early analyses of the data.  As it turns out, the results in the current manuscript our actually from using surface salinity.  The text description of averaging by depth was mistakenly included from an earlier draft and we have corrected the text to indicate that only surface salinity was used.  Regardless, results using surface salinity vs depth-averaged were very similar and did not make a large difference for model performance.  Deviance explained of the GAMs for each bay segment were the same using surface or depth-averaged, the exception being LTB where deviance explained was 0.61 using surface values and 0.59 using depth-averaged.  So, there is an improvement in fit using surface values for LTB, but it is marginal.*
 
 2\. For the "futures" scenario, linear regression is used to empirically estimate future salinity. However, for the loading, it's more of a sensitivity analysis approach, where the TMDL threshold is either halved or doubled. What is the justification for the choice of loading scenarios, rather than assuming long-term observed trends in loading will continue over the next 50 years? This is obviously unlikely if the decrease in load was due to one-time WWTP upgrades, but I think the choice still warrants further explanation as halving the load specified in the TMDL may also be an equally unlikely scenario depending on source, available BMPs, etc...
 
@@ -82,7 +82,7 @@ Specific Comments
 
 11\. Ln 349: Is the lower percent explained in LTB due to aliasing of tidal variability in salinity data since the data was depth-averaged?
 
-*response* 
+*Please see our response to the first general comment.* 
 
 12\. Ln 353 - 356: I believe this is determined by the p-value, which should be clarified in the text.
 
@@ -98,11 +98,11 @@ Specific Comments
 
 15\. Figure 6: Consider making the x- and y-axis scales the same for the different segments because the e.g., stronger loading effect in OTB/HB isn't immediately obvious. Also, are the lines necessary since the points are color-coded? You could instead use a color gradient to represent year as in Figure 3. This would lessen the need to have year labels, which should be described in the caption if included.
 
-*response* 
+*For subfigure (a), we retain the separate scaling for each bay segment because we feel it is important to help visualize differences between years for each bay segment. However, we have removed the path connection between years to help declutter the plot.  For subfigure (b), the axes are now fixed to better emphasize scale comparisons between sub-segments. The caption was updated to describe this rationale: "The axis scales are not fixed in (a) to better visualize inter-annual changes within each bay segment, whereas the scales are fixed in (b) to emphasize differences in the magnitude of the drivers between bay segments.".  Regarding color, we feel that using these broad annual groupings helps visually discriminate temporal shifts in drivers of chlorophyll (salinity v loading) and the categories align with other comparisons throughout the manuscript (i.e., tables 2 and 3, simulation time period), so they are retained as is.* 
 
 16\. Ln 554-55: Is high salinity attributable to high tidal exchange given the monthly data doesn't resolve tidal variability? Or is it that the salinity is higher during the dry season? (this explanation seems more consistent with the sentences that follow).
 
-*response* 
+*Yes, this sentence is a little misleading given those that follow.  We removed the part about tidal exchange and just shortened the sentence to "The opposite could be true during periods of high salinity (...". As is the premise of this paragraph, the specific causal mechanism for which salinity serves as a proxy cannot be known without additional data.  Our interpretation in this paragraph elucidates some potential reasons to allow the reader to make a more informed assessment as to how multiple factors influence phytoplankton growth. Salinity is simply a rough proxy for these drivers, as stated throughout.* 
 
 ### Reviewer #2:
 

@@ -505,7 +505,7 @@ modsgauss <- wqdat |>
     )
   )
 
-AIC(modsgamma$mod[[1]], modsgauss$mod[[1]])
+# AIC(modsgamma$mod[[1]], modsgauss$mod[[1]])
 # AIC(modsgamma$mod[[2]], modsgauss$mod[[2]])
 # AIC(modsgamma$mod[[3]], modsgauss$mod[[3]])
 # AIC(modsgamma$mod[[4]], modsgauss$mod[[4]])
