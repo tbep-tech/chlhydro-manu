@@ -1621,51 +1621,51 @@ dev.off()
 # print(p)
 # dev.off()
 
-# current load trends ----------------------------------------------------
+# # current load trends ----------------------------------------------------
 
-load(file = here('data/lddat.RData'))
+# load(file = here('data/lddat.RData'))
 
-tomod <- lddat |>
-  filter(yr >= 2012) |>
-  summarise(
-    tn_load = sum(tn_load, na.rm = T),
-    .by = c(bay_segment, yr)
-  )
+# tomod <- lddat |>
+#   filter(yr >= 2012) |>
+#   summarise(
+#     tn_load = sum(tn_load, na.rm = T),
+#     .by = c(bay_segment, yr)
+#   )
 
-indmod <- tomod |>
-  group_by(bay_segment) |>
-  group_map(~ summary(lm(tn_load ~ yr, data = .x)))
+# indmod <- tomod |>
+#   group_by(bay_segment) |>
+#   group_map(~ summary(lm(tn_load ~ yr, data = .x)))
 
-mod <- lm(tn_load ~ bay_segment * yr, data = tomod, na.action = 'na.exclude')
+# mod <- lm(tn_load ~ bay_segment * yr, data = tomod, na.action = 'na.exclude')
 
-prds <- ggpredict(mod, terms = c("yr", "bay_segment"))
-toplo <- as_tibble(prds)
-rawdat <- attr(prds, 'rawdata') |> as_tibble()
+# prds <- ggpredict(mod, terms = c("yr", "bay_segment"))
+# toplo <- as_tibble(prds)
+# rawdat <- attr(prds, 'rawdata') |> as_tibble()
 
-p <- ggplot() +
-  geom_point(
-    data = rawdat,
-    aes(x = x, y = response / 1000, color = group),
-    size = 2
-  ) +
-  geom_line(data = toplo, aes(x = x, y = predicted / 1000, color = group)) +
-  geom_ribbon(
-    data = toplo,
-    aes(x = x, ymin = conf.low / 1000, ymax = conf.high / 1000, fill = group),
-    alpha = 0.2,
-    show.legend = F
-  ) +
-  labs(
-    x = NULL,
-    y = 'TN tons (x1000)',
-    color = 'Bay Segment'
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = 'bottom',
-    panel.grid.major = element_blank()
-  )
+# p <- ggplot() +
+#   geom_point(
+#     data = rawdat,
+#     aes(x = x, y = response / 1000, color = group),
+#     size = 2
+#   ) +
+#   geom_line(data = toplo, aes(x = x, y = predicted / 1000, color = group)) +
+#   geom_ribbon(
+#     data = toplo,
+#     aes(x = x, ymin = conf.low / 1000, ymax = conf.high / 1000, fill = group),
+#     alpha = 0.2,
+#     show.legend = F
+#   ) +
+#   labs(
+#     x = NULL,
+#     y = 'TN tons (x1000)',
+#     color = 'Bay Segment'
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     legend.position = 'bottom',
+#     panel.grid.major = element_blank()
+#   )
 
-png(here('figs/loadtrends.png'), width = 7, height = 5, units = 'in', res = 300)
-print(p)
-dev.off()
+# png(here('figs/loadtrends.png'), width = 7, height = 5, units = 'in', res = 300)
+# print(p)
+# dev.off()

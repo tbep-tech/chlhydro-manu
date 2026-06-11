@@ -824,3 +824,52 @@ save(suppconcurvotbtab, file = here('tabs/suppconcurvotbtab.RData'))
 save(suppconcurvhbtab, file = here('tabs/suppconcurvhbtab.RData'))
 save(suppconcurvmtbtab, file = here('tabs/suppconcurvmtbtab.RData'))
 save(suppconcurvltbtab, file = here('tabs/suppconcurvltbtab.RData'))
+
+# supp loading trends --------------------------------------------------------
+
+load(file = here('data/lddat.RData'))
+
+tomod <- lddat |>
+  filter(yr >= 2012) |>
+  mutate(
+    bay_segment = factor(bay_segment, levels = c('OTB', 'HB', 'MTB', 'LTB'))
+  ) |>
+  summarise(
+    tn_load = sum(tn_load, na.rm = TRUE),
+    .by = c(bay_segment, yr)
+  )
+
+totab <- tomod |>
+  group_nest(bay_segment) |>
+  mutate(
+    mod = purrr::map(data, ~ lm(tn_load ~ yr, data = .x)),
+    coefs = purrr::map(mod, function(x) {
+      tidy(x) |>
+        filter(term == 'yr') |>
+        rowwise() |>
+        mutate(p.value = p_txt(p.value, addp = F)) |>
+        ungroup() |>
+        mutate_if(is.numeric, round, 2)
+    }),
+    r2 = purrr::map_dbl(mod, ~ round(glance(.x)$r.squared, 2))
+  ) |>
+  select(bay_segment, coefs, r2) |>
+  unnest(coefs) |>
+  select(
+    `Bay Segment` = bay_segment,
+    `R.sq.` = r2,
+    `Year Estimate` = estimate,
+    `Std. Error` = std.error,
+    `p` = p.value
+  )
+
+suppldtrendtab <- totab |>
+  flextable() |>
+  padding(padding = 0, part = 'all') |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  fontsize(size = 9, part = 'body') |>
+  bold(~ as.numeric(gsub('<', '', p)) < 0.05, j = 'p') |>
+  align(j = 2:5, align = 'center', part = 'all') |>
+  autofit()
+
+save(suppldtrendtab, file = here('tabs/suppldtrendtab.RData'))

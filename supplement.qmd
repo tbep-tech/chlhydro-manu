@@ -72,6 +72,7 @@ load(file = here('tabs/suppconcurvotbtab.RData'))
 load(file = here('tabs/suppconcurvhbtab.RData'))
 load(file = here('tabs/suppconcurvmtbtab.RData'))
 load(file = here('tabs/suppconcurvltbtab.RData'))
+load(file = here('tabs/suppldtrendtab.RData'))
 ```
 
 ## Figures {.unnumbered}
@@ -91,13 +92,13 @@ load(file = here('tabs/suppconcurvltbtab.RData'))
 ## Tables {.unnumbered}
 
 ```{r}
-#| label: tbl-supaictab
+#| label: tbl-suppaictab
 #| tbl-cap: "Comparison of Generalized Additive Models for chlorophyll-a for each bay segment using a Gamma and Gaussian (log-link) error distributions.  Model fit was assessed using Akaike information criterion [AIC, @akaike1974], with the lowest AIC value by segment shown in bold. df: degrees of freedom; OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
 suppaictab
 ```
 
 ```{r}
-#| label: tbl-supgamtab
+#| label: tbl-suppgamtab
 #| tbl-cap: "Generalized Additive Model (GAM) summary statistics for chlorophyll-a predictions by bay segment in Tampa Bay (n = 480 for each).  Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Results for the overall model fit are shown with the Generalized Cross-Validation (GCV) scores in the top rows and deviance explained (Dev. Expl.) in the bottom rows. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
 suppgamtab
 ```
@@ -105,7 +106,7 @@ suppgamtab
 {{< pagebreak >}}
 
 ```{r}
-#| label: tbl-supconcurvotbtab
+#| label: tbl-suppconcurvotbtab
 #| tbl-cap: "Concurvity estimates for the __Old Tampa Bay__ Generalized Additive Models. Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvotbtab
 ```
@@ -113,7 +114,7 @@ suppconcurvotbtab
 {{< pagebreak >}}
 
 ```{r}
-#| label: tbl-supconcurvhbtab
+#| label: tbl-suppconcurvhbtab
 #| tbl-cap: "Concurvity estimates for the __Hillsborough Bay__ Generalized Additive Models. Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvhbtab
 ```
@@ -121,7 +122,7 @@ suppconcurvhbtab
 {{< pagebreak >}}
 
 ```{r}
-#| label: tbl-supconcurvmtbtab
+#| label: tbl-suppconcurvmtbtab
 #| tbl-cap: "Concurvity estimates for the __Middle Tampa Bay__ Generalized Additive Models. Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvmtbtab
 ```
@@ -129,9 +130,17 @@ suppconcurvmtbtab
 {{< pagebreak >}}
 
 ```{r}
-#| label: tbl-supconcurvltbtab
+#| label: tbl-suppconcurvltbtab
 #| tbl-cap: "Concurvity estimates for the __Lower Tampa Bay__ Generalized Additive Models. Values range from 0 to 1 and assess the degree of multicollinearity among predictors. Results are shown for models with different total nitrogen loading lags, whether salinity or loading were corrected for seasonality, and constraints on the number of smoothers (K) for time, loading, and salinity (flexible or fixed). Loads were evaluated as cumulative sums for the current month up to a three month lag. Font size and shading are proportional among cells to emphasize differences."
 suppconcurvltbtab
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-suppldtrendtab
+#| tbl-cap: "Contemporary loading trends from 2012 to 2024 by bay segment.  Results are for regression models of annual loading with year. OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+suppldtrendtab
 ```
 
 {{< pagebreak >}}
