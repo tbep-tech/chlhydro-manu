@@ -77,7 +77,7 @@ load(file = here('tabs/suppldtrendtab.RData'))
 
 ## Figures {.unnumbered}
 
-![Examples demonstrating the salinity normalization method (a), the salinity normalization method at mean loading (b), and the final results (c).  Results are obtained by predicting chlorophyll-a concentrations from a fitted GAM across a range of salinities and estimating the average (a) or doing the same but using mean loading (b).  The bottom plot (c) shows the normalized curves where the red line is the mean curve from (a), the blue dashed line is the mean curve from (b), and the points are the actual model predictions.](figs/suppnorm.png){#fig-suppnorm}
+![Examples demonstrating the salinity normalization method (a), the salinity normalization method at mean loading (b), and the final results (c).  Results are obtained by predicting chlorophyll-a concentrations from a fitted GAM across a range of salinities and estimating the average (a) or doing the same but using mean loading (b).  The bottom plot (c) shows the normalized curves where the red line is the mean curve from (a), the blue dashed line is the mean curve from (b), and the points are the actual model predictions.  The inset in (c) shows how the normalized results are used to identify the unique effects of salinity and loading.](figs/suppnorm.png){#fig-suppnorm}
 
 {{< pagebreak >}}
 
