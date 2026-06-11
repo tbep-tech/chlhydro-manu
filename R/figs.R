@@ -1147,7 +1147,7 @@ xlabs <- c(
 )
 
 draw_smoother <- function(mod, select, seg, is_last_row) {
-  draw(
+  gratia::draw(
     mod,
     residuals = FALSE,
     select = select,
