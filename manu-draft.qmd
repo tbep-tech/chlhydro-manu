@@ -338,7 +338,7 @@ All data and analysis code for this manuscript is available on GitHub at <https:
 
 ## Acknowledgments {.unnumbered}
 
-This work benefited from constructive discussions with the Technical Advisory Committee of the Tampa Bay Estuary Program (TBEP). We are indebted to the community of field and technical staff that have routinely collected and maintained the valuable long-term monitoring data used in this study.  We also thank Dr. Ray Pribble for extensive support with the loading estimates.
+This work benefited from constructive discussions with the Technical Advisory Committee of the Tampa Bay Estuary Program (TBEP). We are indebted to the community of field and technical staff that have routinely collected and maintained the valuable long-term monitoring data used in this study. We thank two anonymous reviewers for their valuable feedback that improved the manuscript. We also thank Dr. Ray Pribble for extensive support with the loading estimates.
 
 ## Statements and Declarations {.unnumbered}
 
