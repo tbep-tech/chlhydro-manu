@@ -67,6 +67,7 @@ library(here)
 library(flextable)
 
 load(file = here('tabs/suppaictab.RData'))
+load(file = here('tabs/suppaicseltab.RData'))
 load(file = here('tabs/suppgamtab.RData'))
 load(file = here('tabs/suppconcurvotbtab.RData'))
 load(file = here('tabs/suppconcurvhbtab.RData'))
@@ -92,10 +93,20 @@ load(file = here('tabs/suppldtrendtab.RData'))
 ## Tables {.unnumbered}
 
 ```{r}
+#| label: tbl-suppaicseltab
+#| tbl-cap: "Comparison of Generalized Additive Models for chlorophyll-a for each bay segment using full models and fit using the select option.  Model fit was assessed using Akaike information criterion [AIC, @akaike1974], with the lowest AIC value by segment shown in bold. df: degrees of freedom; Dev. Expl.: deviance explained; OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+suppaicseltab
+```
+
+{{< pagebreak >}}
+
+```{r}
 #| label: tbl-suppaictab
-#| tbl-cap: "Comparison of Generalized Additive Models for chlorophyll-a for each bay segment using a Gamma and Gaussian (log-link) error distributions.  Model fit was assessed using Akaike information criterion [AIC, @akaike1974], with the lowest AIC value by segment shown in bold. df: degrees of freedom; OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
+#| tbl-cap: "Comparison of Generalized Additive Models for chlorophyll-a for each bay segment using a Gamma and Gaussian (log-link) error distributions.  Model fit was assessed using Akaike information criterion [AIC, @akaike1974], with the lowest AIC value by segment shown in bold. df: degrees of freedom; Dev. Expl.: deviance explained; OTB: Old Tampa Bay; HB: Hillsborough Bay; MTB: Middle Tampa Bay; LTB: Lower Tampa Bay."
 suppaictab
 ```
+
+{{< pagebreak >}}
 
 ```{r}
 #| label: tbl-suppgamtab

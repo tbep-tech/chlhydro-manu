@@ -471,6 +471,111 @@ liktab <- totab |>
 
 save(liktab, file = here('tabs/liktab.RData'))
 
+# supp select comparison -------------------------------------------------
+
+load(file = here('data/wqdat.RData'))
+load(file = here('data/mods.RData'))
+
+modsorig <- mods |>
+  select(-prds, -annsum)
+
+modssel <- wqdat |>
+  filter(dec_time >= 1985) |>
+  group_nest(bay_segment) |>
+  mutate(
+    mod = purrr::map(
+      data,
+      ~ gam(
+        chla ~ s(dec_time, k = 40, bs = 'tp') +
+          s(doy, k = 10, bs = 'cc') +
+          s(sal, k = 10, bs = 'tp') +
+          s(tn_load, k = 10, bs = 'tp') +
+          ti(dec_time, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, sal, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(sal, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(dec_time, tn_load, k = c(5, 5), bs = c('tp', 'tp')) +
+          ti(tn_load, doy, k = c(5, 5), bs = c('tp', 'cc')) +
+          ti(tn_load, sal, k = c(5, 5), bs = c('tp', 'tp')),
+        data = .x,
+        select = T,
+        knots = list(doy = c(0, 366)),
+        family = Gamma(link = 'log'),
+        na.action = na.exclude,
+        method = 'REML'
+      )
+    )
+  )
+
+# AIC(modsorig$mod[[1]], modssel$mod[[1]])
+# AIC(modsorig$mod[[2]], modssel$mod[[2]])
+# AIC(modsorig$mod[[3]], modssel$mod[[3]])
+# AIC(modsorig$mod[[4]], modssel$mod[[4]])
+
+aiccomp <- modsorig |>
+  select(bay_segment, mod_orig = mod) |>
+  left_join(
+    modssel |> select(bay_segment, mod_sel = mod),
+    by = 'bay_segment'
+  ) |>
+  mutate(
+    aic = purrr::map2(mod_sel, mod_orig, ~ AIC(.x, .y)),
+    orig_df = purrr::map_dbl(aic, ~ round(.x[2, 'df'], 1)),
+    orig_aic = purrr::map_dbl(aic, ~ round(.x[2, 'AIC'], 1)),
+    orig_devexpl = purrr::map_dbl(mod_orig, ~ round(summary(.x)$dev.expl, 2)),
+    sel_df = purrr::map_dbl(aic, ~ round(.x[1, 'df'], 1)),
+    sel_aic = purrr::map_dbl(aic, ~ round(.x[1, 'AIC'], 1)),
+    sel_devexpl = purrr::map_dbl(mod_sel, ~ round(summary(.x)$dev.expl, 2)),
+    delta_aic = round(orig_aic - sel_aic, 1)
+  ) |>
+  select(
+    bay_segment,
+    orig_df,
+    orig_devexpl,
+    orig_aic,
+    sel_df,
+    sel_devexpl,
+    sel_aic,
+    delta_aic
+  )
+
+suppaicseltab <- aiccomp |>
+  flextable() |>
+  add_header_row(
+    values = c('', 'Full', 'Select', ''),
+    colwidths = c(1, 3, 3, 1)
+  ) |>
+  set_header_labels(
+    i = 2,
+    values = c(
+      'Bay Segment',
+      'df',
+      'Dev. Expl.',
+      'AIC',
+      'df',
+      'Dev. Expl.',
+      'AIC',
+      'ΔAIC'
+    )
+  ) |>
+  merge_at(i = 1, j = 2:4, part = 'header') |>
+  merge_at(i = 1, j = 5:7, part = 'header') |>
+  align(align = 'center', part = 'header') |>
+  align(align = 'left', part = 'header', i = 1) |>
+  align(align = 'left', part = 'all', j = 2:8) |>
+  bold(i = which(aiccomp$sel_aic < aiccomp$orig_aic), j = 'sel_aic') |>
+  bold(i = which(aiccomp$orig_aic < aiccomp$sel_aic), j = 'orig_aic') |>
+  padding(padding = 0, part = 'all') |>
+  font(part = 'all', fontname = 'Times New Roman') |>
+  fontsize(size = 9, part = 'body') |>
+  add_footer_lines(
+    'ΔAIC = Full AIC - Select AIC'
+  ) |>
+  font(part = 'footer', fontname = 'Times New Roman') |>
+  fontsize(size = 8, part = 'footer') |>
+  autofit()
+
+save(suppaicseltab, file = here('tabs/suppaicseltab.RData'))
+
 # supp gamma vs gauss log models -----------------------------------------
 
 load(file = here('data/wqdat.RData'))
@@ -520,41 +625,54 @@ aiccomp <- modsgamma |>
     aic = purrr::map2(mod_gamma, mod_gauss, ~ AIC(.x, .y)),
     gamma_df = purrr::map_dbl(aic, ~ round(.x[1, 'df'], 1)),
     gamma_aic = purrr::map_dbl(aic, ~ round(.x[1, 'AIC'], 1)),
+    gamma_devexpl = purrr::map_dbl(mod_gamma, ~ round(summary(.x)$dev.expl, 2)),
     gauss_df = purrr::map_dbl(aic, ~ round(.x[2, 'df'], 1)),
     gauss_aic = purrr::map_dbl(aic, ~ round(.x[2, 'AIC'], 1)),
-    delta_aic = round(gauss_aic - gamma_aic, 1)
+    gauss_devexpl = purrr::map_dbl(mod_gauss, ~ round(summary(.x)$dev.expl, 2)),
+    delta_aic = round(gamma_aic - gauss_aic, 1)
   ) |>
-  select(bay_segment, gamma_df, gamma_aic, gauss_df, gauss_aic, delta_aic)
+  select(
+    bay_segment,
+    gamma_df,
+    gamma_devexpl,
+    gamma_aic,
+    gauss_df,
+    gauss_devexpl,
+    gauss_aic,
+    delta_aic
+  )
 
 suppaictab <- aiccomp |>
   flextable() |>
   add_header_row(
     values = c('', 'Gamma', 'Gaussian (log)', ''),
-    colwidths = c(1, 2, 2, 1)
+    colwidths = c(1, 3, 3, 1)
   ) |>
   set_header_labels(
     i = 2,
     values = c(
       'Bay Segment',
       'df',
+      'Dev. Expl.',
       'AIC',
       'df',
+      'Dev. Expl.',
       'AIC',
       'ΔAIC'
     )
   ) |>
-  merge_at(i = 1, j = 2:3, part = 'header') |>
-  merge_at(i = 1, j = 4:5, part = 'header') |>
+  merge_at(i = 1, j = 2:4, part = 'header') |>
+  merge_at(i = 1, j = 5:7, part = 'header') |>
   align(align = 'center', part = 'header') |>
   align(align = 'left', part = 'header', i = 1) |>
-  align(align = 'left', part = 'all', j = 2:6) |>
+  align(align = 'left', part = 'all', j = 2:8) |>
   bold(i = which(aiccomp$gamma_aic < aiccomp$gauss_aic), j = 'gamma_aic') |>
   bold(i = which(aiccomp$gauss_aic < aiccomp$gamma_aic), j = 'gauss_aic') |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
   fontsize(size = 9, part = 'body') |>
   add_footer_lines(
-    'ΔAIC = Gaussian (log) AIC - Gamma AIC'
+    'ΔAIC = Gamma AIC - Gaussian (log) AIC'
   ) |>
   font(part = 'footer', fontname = 'Times New Roman') |>
   fontsize(size = 8, part = 'footer') |>
