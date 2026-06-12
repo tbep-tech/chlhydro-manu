@@ -566,12 +566,12 @@ suppaicseltab <- aiccomp |>
   bold(i = which(aiccomp$orig_aic < aiccomp$sel_aic), j = 'orig_aic') |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
-  fontsize(size = 9, part = 'body') |>
+  fontsize(size = 11, part = 'body') |>
   add_footer_lines(
     'ΔAIC = Full AIC - Select AIC'
   ) |>
   font(part = 'footer', fontname = 'Times New Roman') |>
-  fontsize(size = 8, part = 'footer') |>
+  fontsize(size = 11, part = 'footer') |>
   autofit()
 
 save(suppaicseltab, file = here('tabs/suppaicseltab.RData'))
@@ -670,12 +670,12 @@ suppaictab <- aiccomp |>
   bold(i = which(aiccomp$gauss_aic < aiccomp$gamma_aic), j = 'gauss_aic') |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
-  fontsize(size = 9, part = 'body') |>
+  fontsize(size = 11, part = 'body') |>
   add_footer_lines(
     'ΔAIC = Gamma AIC - Gaussian (log) AIC'
   ) |>
   font(part = 'footer', fontname = 'Times New Roman') |>
-  fontsize(size = 8, part = 'footer') |>
+  fontsize(size = 11, part = 'footer') |>
   autofit()
 
 save(suppaictab, file = here('tabs/suppaictab.RData'))
@@ -985,7 +985,7 @@ suppldtrendtab <- totab |>
   flextable() |>
   padding(padding = 0, part = 'all') |>
   font(part = 'all', fontname = 'Times New Roman') |>
-  fontsize(size = 9, part = 'body') |>
+  fontsize(size = 11, part = 'body') |>
   bold(~ as.numeric(gsub('<', '', p)) < 0.05, j = 'p') |>
   align(j = 2:5, align = 'center', part = 'all') |>
   autofit()
