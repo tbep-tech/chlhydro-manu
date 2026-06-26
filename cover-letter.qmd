@@ -9,27 +9,29 @@ editor: visual
 
 \today
 
-Dr. Just Cebrian, Dr. Paul Montagna, Dr. Melissa Wong, Editors-in-Chief\
+Dr. Just Cebrian, Editor-in-Chief\
+Dr. Devyani Kar, Associate Editor\
 Estuaries and Coasts
 
 \vfill
 
-Dear Dr. Cebrian, Dr. Montagna, and Dr. Wong,
+Dear Dr. Cebrian and Dr. Kar,
 
 \vspace{0.5cm}
 
-Enclosed please find our manuscript, titled \`Managing the unmanageable: Understanding the competing effects of salinity and nutrient loading on estuarine water quality', to be considered as a management applications article in Estuaries and Coasts.
+Enclosed please find our revised manuscript, titled \`Managing the unmanageable: Understanding the competing effects of salinity and nutrient loading on estuarine water quality', to be considered as a management applications article in Estuaries and Coasts.
 
-Previous work we published in Estuaries and Coasts demonstrated a long-term reduction in salinity in Tampa Bay, Florida (<https://doi.org.10.1007/s12237-024-01385-0>).  The objective of that work was to assess the trends and establish associations with recent seagrass losses.  These changes also have significant implications for the management of water quality. In this work, we use empirical models to identify unique effects of salinity and nutrient loading on chlorophyll-a concentrations to assess how large-scale freshening of the bay may limit the effectiveness of nutrient management efforts. In addition to quantifying how both have influenced chlorophyll-a concentrations over time, we provide simulation analyses to assess the likelihood of attaining regulatory standards in the future under changing baselines.  Overall, we provide a cautionary tale that climate-related stressors can confound existing management models, particularly related to nutrient management, and that these effects should be considered in future management efforts.
+We sincerely appreciate the constructive comments provided by both reviewers. Our point-by-point responses document our revisions in detail. In brief, we have provided more substantial justification for our modeling approach (reviewer 1) and included additional work exploring alternative model structures (reviewer 2). Much of this content is included in the supplement to further justify our approach. Additional elaboration on our methods has also been provided at appropriate locations in the text. Overall, our conclusions remain the same and our intent is to motivate resource managers to look more proactively at existing management paradigms relative to shifting baselines.
 
-This work has not been published elsewhere, nor is it under consideration for publication anywhere else. Each author has contributed substantially to this work. All authors have contributed to the writing and review of the original draft. Analysis was conducted by the first author, with interpretation of results supported by all other co-authors. All authors have approved the final draft and the submitted product was prepared according to instructions for authors provided on the journal's website.
+Again, we greatly appreciate the opportunity to publish this work in Estuaries and Coasts and believe that readers will consider it a valuable contribution. Please feel free to contact us directly should additional information be needed.
 
-We greatly appreciate the opportunity to publish this work in Estuaries and Coasts and are confident readers will consider it a valuable contribution. Please feel free to contact us directly should additional information be needed.
- 
 \vspace{0.5cm}
 
 Regards,
 
-Marcus W. Beck, Tampa Bay Estuary Program, St. Petersburg, Florida, USA, [mbeck@tbep.org](mailto:mbeck@tbep.org)
+Dr. Marcus W. Beck\
+Tampa Bay Estuary Program\
+St. Petersburg, Florida, USA\
+[mbeck\@tbep.org](mailto:mbeck@tbep.org)
 
 \vfill
